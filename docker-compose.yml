@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      SQLITE_PATH: /data/database.db
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-por-um-valor-longo-aleatorio-em-producao-min-32-chars}
+    volumes:
+      - sqlite_data:/data
+
+volumes:
+  sqlite_data:
