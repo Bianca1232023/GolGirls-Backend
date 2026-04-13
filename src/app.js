@@ -1,7 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes/routes.js';
+import swaggerSpec from './docs/swagger.js';
 import {
   createTableAdmin,
   createTableProfessor,
@@ -31,6 +33,8 @@ app.use((req, res, next) => {
 app.get('/', (_req, res) => {
   res.json({ status: 200, service: 'gogirls-backend' });
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(routes);
 
