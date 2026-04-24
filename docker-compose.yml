@@ -1,14 +1,35 @@
 services:
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-gogirls}
+      MYSQL_USER: ${DB_USER:-gogirls}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-gogirls}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      PORT: 3000
-      SQLITE_PATH: /data/database.db
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-gogirls}
+      DB_PASSWORD: ${DB_PASSWORD:-gogirls}
+      DB_NAME: ${DB_NAME:-gogirls}
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-por-um-valor-longo-aleatorio-em-producao-min-32-chars}
-    volumes:
-      - sqlite_data:/data
 
 volumes:
-  sqlite_data:
+  mysql_data:

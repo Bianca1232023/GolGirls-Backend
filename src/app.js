@@ -7,7 +7,11 @@ import swaggerSpec from './docs/swagger.js';
 import {
   createTableAdmin,
   createTableProfessor,
-  createTableParticipants,
+  createTableTurmas,
+  createTableProfessorTurmas,
+  createTableNucleos,
+  createTableEscolas,
+  createTableAlunos,
 } from './controller/users.js';
 
 const app = express();
@@ -43,11 +47,11 @@ app.use((_req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
-  const status = err.status || err.statusCode || (err.code === 'SQLITE_CONSTRAINT' ? 409 : 500);
-  const message =
-    err.code === 'SQLITE_CONSTRAINT'
-      ? 'Dados em conflito com regras do banco (ex.: email duplicado)'
-      : err.message || 'Erro interno';
+  const isDupEntry = err.code === 'ER_DUP_ENTRY';
+  const status = err.status || err.statusCode || (isDupEntry ? 409 : 500);
+  const message = isDupEntry
+    ? 'Dados em conflito com regras do banco (ex.: email duplicado)'
+    : err.message || 'Erro interno';
 
   const body = { status, message };
   if (process.env.NODE_ENV !== 'production' && err.stack) {
@@ -75,8 +79,12 @@ function assertJwtSecret() {
 async function start() {
   assertJwtSecret();
   await createTableAdmin();
+  await createTableTurmas();
   await createTableProfessor();
-  await createTableParticipants();
+  await createTableProfessorTurmas();
+  await createTableNucleos();
+  await createTableEscolas();
+  await createTableAlunos();
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });

@@ -5,7 +5,9 @@ import authenticateToken from '../middleware/auth.js';
 import {
   registerAdmin,
   loginAdmin,
-  registerProfessor,
+  inviteProfessor,
+  findProfessorByResetToken,
+  activateProfessor,
   getAdmins,
   updateAdmin,
   updateAdminPartial,
@@ -13,10 +15,26 @@ import {
   adminEmailTaken,
   professorEmailTaken,
   loginProfessor,
-  registerParticipant,
-  listParticipants,
+  registerAluno,
+  listAlunos,
+  listAlunosWithFilters,
+  createTurma,
+  listTurmas,
+  listTurmasByProfessor,
+  getTurmaById,
+  getAlunosByTurma,
+  getProfessorById,
+  professorOwnsTurma,
+  updateAlunoTurma,
+  createNucleo,
+  listNucleos,
+  deleteNucleo,
+  createEscola,
+  listEscolas,
+  deleteEscola,
 } from '../controller/users.js';
 import { assertEmail, assertNonEmptyString, assertPassword } from '../utils/validation.js';
+import { sendPasswordSetupEmail } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -46,8 +64,14 @@ function signProfessorToken(prof) {
   });
 }
 
+function signAlunoToken(aluno) {
+  return jwt.sign({ id: aluno.id, role: 'aluno' }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  });
+}
+
 router.post(
-  '/register',
+  '/admin/register',
   authLimiter,
   asyncHandler(async (req, res) => {
     const name = assertNonEmptyString(req.body?.name, 'name');
@@ -66,7 +90,7 @@ router.post(
 );
 
 router.post(
-  '/login',
+  '/admin/login',
   authLimiter,
   asyncHandler(async (req, res) => {
     const email = assertEmail(req.body?.email);
@@ -89,13 +113,60 @@ router.post(
     const email = assertEmail(req.body?.email);
     const password = assertNonEmptyString(req.body?.password, 'password');
 
-    const prof = await loginProfessor(email, password);
-    if (!prof) {
+    const result = await loginProfessor(email, password);
+    if (!result) {
       return res.status(401).json({ status: 401, message: 'Email ou senha inválidos' });
     }
+    if (result.error) {
+      return res.status(403).json({ status: 403, message: result.error });
+    }
 
-    const token = signProfessorToken(prof);
+    const token = signProfessorToken(result);
     res.json({ status: 200, token });
+  })
+);
+
+router.post(
+  '/professor/set-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const token = assertNonEmptyString(req.body?.token, 'token');
+    const password = assertPassword(req.body?.password);
+
+    const prof = await findProfessorByResetToken(token);
+    if (!prof) {
+      return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+    }
+
+    await activateProfessor(prof.id, password);
+    res.json({ status: 200, message: 'Senha definida com sucesso. Você já pode fazer login.' });
+  })
+);
+
+router.post(
+  '/professor/createturma',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'professor') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+    }
+
+    const nome = assertNonEmptyString(req.body?.nome, 'nome');
+    const turma = await createTurma(nome, req.user.id);
+    res.status(201).json({ status: 201, turma });
+  })
+);
+
+router.get(
+  '/professor/turmas',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'professor') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+    }
+
+    const turmas = await listTurmasByProfessor(req.user.id);
+    res.json({ status: 200, turmas });
   })
 );
 
@@ -109,7 +180,6 @@ router.post(
 
     const name = assertNonEmptyString(req.body?.name, 'name');
     const email = assertEmail(req.body?.email);
-    const password = assertPassword(req.body?.password);
 
     if (await professorEmailTaken(email)) {
       const err = new Error('Email já cadastrado');
@@ -117,8 +187,9 @@ router.post(
       throw err;
     }
 
-    await registerProfessor({ name, email, password });
-    res.json({ status: 200, message: 'Professor criado com sucesso' });
+    const { token } = await inviteProfessor(name, email);
+    await sendPasswordSetupEmail(email, token);
+    res.status(201).json({ status: 201, message: 'Professor convidado com sucesso. E-mail enviado.' });
   })
 );
 
@@ -188,30 +259,194 @@ router.delete(
 );
 
 router.post(
-  '/participants/register',
-  authLimiter,
+  '/professor/createaluno',
+  authenticateToken,
   asyncHandler(async (req, res) => {
-    const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
-    const nucleo = assertNonEmptyString(req.body?.nucleo, 'nucleo');
-    const funcao = req.body?.funcao ?? req.body?.função;
-    assertNonEmptyString(funcao, 'funcao ou função');
+    if (req.user?.role !== 'professor') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+    }
 
-    await registerParticipant({ matricula, nucleo, funcao });
-    res.status(201).json({ status: 201, message: 'Cadastro registrado com sucesso' });
+    const turma_id = Number(req.body?.turma_id);
+    if (!turma_id || isNaN(turma_id)) {
+      return res.status(400).json({ status: 400, message: 'turma_id é obrigatório' });
+    }
+
+    const owns = await professorOwnsTurma(req.user.id, turma_id);
+    if (!owns) {
+      return res.status(403).json({ status: 403, message: 'Turma não pertence a este professor' });
+    }
+
+    const nome = assertNonEmptyString(req.body?.nome, 'nome');
+    const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
+    const nucleo_id = Number(req.body?.nucleo_id);
+    const escola_id = Number(req.body?.escola_id);
+    const bairro = assertNonEmptyString(req.body?.bairro, 'bairro');
+
+    if (!nucleo_id || isNaN(nucleo_id)) {
+      return res.status(400).json({ status: 400, message: 'nucleo_id é obrigatório' });
+    }
+    if (!escola_id || isNaN(escola_id)) {
+      return res.status(400).json({ status: 400, message: 'escola_id é obrigatório' });
+    }
+
+    await registerAluno({ nome, matricula, nucleo_id, bairro, escola_id, turma_id });
+    res.status(201).json({ status: 201, message: 'Cadastro do aluno registrado com sucesso' });
   })
 );
 
-async function listParticipantsForAdmin(req, res) {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+router.patch(
+  '/professor/alunos/:id/turma',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'professor') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+    }
+
+    const alunoId = Number(req.params.id);
+    const turma_id = Number(req.body?.turma_id);
+
+    if (!turma_id || isNaN(turma_id)) {
+      return res.status(400).json({ status: 400, message: 'turma_id é obrigatório' });
+    }
+
+    const owns = await professorOwnsTurma(req.user.id, turma_id);
+    if (!owns) {
+      return res.status(403).json({ status: 403, message: 'Turma não pertence a este professor' });
+    }
+
+    await updateAlunoTurma(alunoId, turma_id);
+    res.json({ status: 200, message: 'Aluno movido para a turma com sucesso' });
+  })
+);
+
+router.get(
+  '/admin/turmas',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+
+    const turmas = await listTurmas();
+    res.json({ status: 200, turmas });
+  })
+);
+
+router.get(
+  '/turmas/:id/alunos',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'professor') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores e professores' });
+    }
+
+    const { id } = req.params;
+    const alunos = await getAlunosByTurma(id);
+    res.json({ status: 200, alunos });
+  })
+);
+
+router.post(
+  '/aluno/login',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
+
+    const aluno = await loginAluno(matricula);
+    if (!aluno) {
+      return res.status(401).json({ status: 401, message: 'Matrícula inválida' });
+    }
+
+    const token = signAlunoToken(aluno);
+    res.json({ status: 200, token });
+    })
+);
+
+async function listAlunosForProfessor(req, res) {
+  if (req.user?.role !== 'professor' && req.user?.role !== 'admin') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a professores e administradores' });
   }
 
-  const rows = await listParticipants();
-  res.json({ status: 200, participants: rows, users: rows });
+  if (req.user?.role === 'professor') {
+    const { turma_id, nucleo_id, escola_id, bairro } = req.query;
+    const alunos = await listAlunosWithFilters(req.user.id, { turma_id, nucleo_id, escola_id, bairro });
+    return res.json({ status: 200, alunos });
+  }
+
+  const rows = await listAlunos();
+  res.json({ status: 200, alunos: rows });
 }
 
-router.get('/participants', authenticateToken, asyncHandler(listParticipantsForAdmin));
+router.get('/alunos', authenticateToken, asyncHandler(listAlunosForProfessor));
 
-router.get('/users', authenticateToken, asyncHandler(listParticipantsForAdmin));
+// --- Nucleos (admin gerencia, qualquer autenticado consulta) ---
+router.post(
+  '/admin/nucleos',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+    const nome = assertNonEmptyString(req.body?.nome, 'nome');
+    const nucleo = await createNucleo(nome);
+    res.status(201).json({ status: 201, nucleo });
+  })
+);
+
+router.get(
+  '/nucleos',
+  authenticateToken,
+  asyncHandler(async (_req, res) => {
+    const nucleos = await listNucleos();
+    res.json({ status: 200, nucleos });
+  })
+);
+
+router.delete(
+  '/admin/nucleos/:id',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+    await deleteNucleo(req.params.id);
+    res.json({ status: 200, message: 'Núcleo removido com sucesso' });
+  })
+);
+
+// --- Escolas (admin gerencia, qualquer autenticado consulta) ---
+router.post(
+  '/admin/escolas',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+    const nome = assertNonEmptyString(req.body?.nome, 'nome');
+    const escola = await createEscola(nome);
+    res.status(201).json({ status: 201, escola });
+  })
+);
+
+router.get(
+  '/escolas',
+  authenticateToken,
+  asyncHandler(async (_req, res) => {
+    const escolas = await listEscolas();
+    res.json({ status: 200, escolas });
+  })
+);
+
+router.delete(
+  '/admin/escolas/:id',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+    await deleteEscola(req.params.id);
+    res.json({ status: 200, message: 'Escola removida com sucesso' });
+  })
+);
 
 export default router;
