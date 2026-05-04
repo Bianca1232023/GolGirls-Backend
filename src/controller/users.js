@@ -39,6 +39,8 @@ export async function createTableProfessor() {
   )`);
   // migração: torna password nullable (professores convidados sem senha)
   await pool.query('ALTER TABLE professors MODIFY COLUMN password VARCHAR(255)');
+  // migração: torna name nullable (professores que ainda não definiram o nome via convite)
+  await pool.query('ALTER TABLE professors MODIFY COLUMN name VARCHAR(150)');
   // migração: adiciona reset_token se não existir
   const [rtCols] = await pool.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
@@ -242,12 +244,12 @@ export async function loginProfessor(email, password) {
   return ok ? stripPassword(row) : null;
 }
 
-export async function inviteProfessor(name, email) {
+export async function inviteProfessor(email) {
   const token = randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
   const [result] = await pool.query(
-    'INSERT INTO professors (name, email, reset_token, reset_token_expires, ativo) VALUES (?, ?, ?, ?, FALSE)',
-    [name, email, token, expires]
+    'INSERT INTO professors (name, email, reset_token, reset_token_expires, ativo) VALUES (NULL, ?, ?, ?, FALSE)',
+    [email, token, expires]
   );
   return { id: result.insertId, token };
 }
@@ -260,11 +262,11 @@ export async function findProfessorByResetToken(token) {
   return rows[0] ?? null;
 }
 
-export async function activateProfessor(professorId, plainPassword) {
+export async function activateProfessor(professorId, name, plainPassword) {
   const hash = await hashPassword(plainPassword);
   await pool.query(
-    'UPDATE professors SET password = ?, reset_token = NULL, reset_token_expires = NULL, ativo = TRUE WHERE id = ?',
-    [hash, professorId]
+    'UPDATE professors SET name = ?, password = ?, reset_token = NULL, reset_token_expires = NULL, ativo = TRUE WHERE id = ?',
+    [name, hash, professorId]
   );
 }
 
@@ -496,6 +498,14 @@ export async function listAlunos() {
      ORDER BY a.id`
   );
   return rows;
+}
+
+export async function loginAluno(matricula) {
+  const [rows] = await pool.query(
+    'SELECT id, nome, matricula FROM alunos WHERE matricula = ? LIMIT 1',
+    [matricula]
+  );
+  return rows[0] || null;
 }
 
 // --- Nucleos ---

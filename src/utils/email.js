@@ -18,8 +18,8 @@ export async function sendPasswordSetupEmail(to, token) {
     subject: 'GolGirls – Defina sua senha de acesso',
     html: `
       <p>Olá!</p>
-      <p>Você foi cadastrada(o) como professor(a) na plataforma <strong>GoGirls</strong>.</p>
-      <p>Clique no link abaixo para criar sua senha de acesso:</p>
+      <p>Você foi convidada(o) como professor(a) na plataforma <strong>GoGirls</strong>.</p>
+      <p>Clique no link abaixo para informar seu <strong>nome completo</strong> e criar sua senha de acesso:</p>
       <p><a href="${link}">${link}</a></p>
       <p>Este link expira em <strong>24 horas</strong>.</p>
       <p>Se você não solicitou este cadastro, ignore este e-mail.</p>

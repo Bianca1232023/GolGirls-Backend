@@ -15,6 +15,7 @@ import {
   adminEmailTaken,
   professorEmailTaken,
   loginProfessor,
+  loginAluno,
   registerAluno,
   listAlunos,
   listAlunosWithFilters,
@@ -131,6 +132,7 @@ router.post(
   authLimiter,
   asyncHandler(async (req, res) => {
     const token = assertNonEmptyString(req.body?.token, 'token');
+    const name = assertNonEmptyString(req.body?.name, 'name');
     const password = assertPassword(req.body?.password);
 
     const prof = await findProfessorByResetToken(token);
@@ -138,7 +140,7 @@ router.post(
       return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
     }
 
-    await activateProfessor(prof.id, password);
+    await activateProfessor(prof.id, name, password);
     res.json({ status: 200, message: 'Senha definida com sucesso. Você já pode fazer login.' });
   })
 );
@@ -178,7 +180,6 @@ router.post(
       return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
     }
 
-    const name = assertNonEmptyString(req.body?.name, 'name');
     const email = assertEmail(req.body?.email);
 
     if (await professorEmailTaken(email)) {
@@ -187,7 +188,7 @@ router.post(
       throw err;
     }
 
-    const { token } = await inviteProfessor(name, email);
+    const { token } = await inviteProfessor(email);
     await sendPasswordSetupEmail(email, token);
     res.status(201).json({ status: 201, message: 'Professor convidado com sucesso. E-mail enviado.' });
   })
