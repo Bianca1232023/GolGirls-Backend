@@ -21,10 +21,38 @@ async function verifyPassword(plain, hash) {
 export async function createTableAdmin() {
   await pool.query(`CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
+    name VARCHAR(150),
     email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(100) NOT NULL
+    password VARCHAR(255),
+    reset_token VARCHAR(255),
+    reset_token_expires DATETIME,
+    ativo BOOLEAN NOT NULL DEFAULT FALSE
   )`);
+  // migrações para admins existentes
+  await pool.query('ALTER TABLE admins MODIFY COLUMN name VARCHAR(150)');
+  await pool.query('ALTER TABLE admins MODIFY COLUMN password VARCHAR(255)');
+  const [rtCols] = await pool.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admins' AND COLUMN_NAME = 'reset_token'`
+  );
+  if (rtCols.length === 0) {
+    await pool.query('ALTER TABLE admins ADD COLUMN reset_token VARCHAR(255) AFTER password');
+  }
+  const [rteCols] = await pool.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admins' AND COLUMN_NAME = 'reset_token_expires'`
+  );
+  if (rteCols.length === 0) {
+    await pool.query('ALTER TABLE admins ADD COLUMN reset_token_expires DATETIME AFTER reset_token');
+  }
+  const [ativoCols] = await pool.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admins' AND COLUMN_NAME = 'ativo'`
+  );
+  if (ativoCols.length === 0) {
+    await pool.query('ALTER TABLE admins ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT FALSE AFTER reset_token_expires');
+    await pool.query('UPDATE admins SET ativo = TRUE WHERE password IS NOT NULL');
+  }
 }
 
 export async function createTableProfessor() {
@@ -207,7 +235,7 @@ export async function adminEmailTaken(email) {
 export async function registerAdmin(admin) {
   const hash = await hashPassword(admin.password);
   const [result] = await pool.query(
-    'INSERT INTO admins (name, email, password) VALUES (?, ?, ?)',
+    'INSERT INTO admins (name, email, password, ativo) VALUES (?, ?, ?, TRUE)',
     [admin.name, admin.email, hash]
   );
   return result;
@@ -217,8 +245,35 @@ export async function loginAdmin(email, password) {
   const [rows] = await pool.query('SELECT * FROM admins WHERE email = ?', [email]);
   const row = rows[0] ?? null;
   if (!row) return null;
+  if (!row.ativo) return { error: 'Conta ainda não ativada. Verifique seu e-mail para definir sua senha.' };
   const ok = await verifyPassword(password, row.password);
   return ok ? stripPassword(row) : null;
+}
+
+export async function inviteAdmin(email) {
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  const [result] = await pool.query(
+    'INSERT INTO admins (name, email, reset_token, reset_token_expires, ativo) VALUES (NULL, ?, ?, ?, FALSE)',
+    [email, token, expires]
+  );
+  return { id: result.insertId, token };
+}
+
+export async function findAdminByResetToken(token) {
+  const [rows] = await pool.query(
+    'SELECT id, email FROM admins WHERE reset_token = ? AND reset_token_expires > UTC_TIMESTAMP()',
+    [token]
+  );
+  return rows[0] ?? null;
+}
+
+export async function activateAdmin(adminId, name, plainPassword) {
+  const hash = await hashPassword(plainPassword);
+  await pool.query(
+    'UPDATE admins SET name = ?, password = ?, reset_token = NULL, reset_token_expires = NULL, ativo = TRUE WHERE id = ?',
+    [name, hash, adminId]
+  );
 }
 
 export async function professorEmailTaken(email) {
@@ -268,6 +323,62 @@ export async function activateProfessor(professorId, name, plainPassword) {
     'UPDATE professors SET name = ?, password = ?, reset_token = NULL, reset_token_expires = NULL, ativo = TRUE WHERE id = ?',
     [name, hash, professorId]
   );
+}
+
+export async function requestProfessorPasswordReset(email) {
+  const [rows] = await pool.query('SELECT id FROM professors WHERE email = ? AND ativo = TRUE', [email]);
+  const professor = rows[0] ?? null;
+  if (!professor) return null;
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+  await pool.query(
+    'UPDATE professors SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+    [token, expires, professor.id]
+  );
+  return token;
+}
+
+export async function resetProfessorPassword(token, plainPassword) {
+  const [rows] = await pool.query(
+    'SELECT id FROM professors WHERE reset_token = ? AND reset_token_expires > UTC_TIMESTAMP()',
+    [token]
+  );
+  const professor = rows[0] ?? null;
+  if (!professor) return false;
+  const hash = await hashPassword(plainPassword);
+  await pool.query(
+    'UPDATE professors SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+    [hash, professor.id]
+  );
+  return true;
+}
+
+export async function requestAdminPasswordReset(email) {
+  const [rows] = await pool.query('SELECT id FROM admins WHERE email = ? AND ativo = TRUE', [email]);
+  const admin = rows[0] ?? null;
+  if (!admin) return null;
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+  await pool.query(
+    'UPDATE admins SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+    [token, expires, admin.id]
+  );
+  return token;
+}
+
+export async function resetAdminPassword(token, plainPassword) {
+  const [rows] = await pool.query(
+    'SELECT id FROM admins WHERE reset_token = ? AND reset_token_expires > UTC_TIMESTAMP()',
+    [token]
+  );
+  const admin = rows[0] ?? null;
+  if (!admin) return false;
+  const hash = await hashPassword(plainPassword);
+  await pool.query(
+    'UPDATE admins SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+    [hash, admin.id]
+  );
+  return true;
 }
 
 export async function getAdmins(id) {

@@ -5,6 +5,9 @@ import authenticateToken from '../middleware/auth.js';
 import {
   registerAdmin,
   loginAdmin,
+  inviteAdmin,
+  findAdminByResetToken,
+  activateAdmin,
   inviteProfessor,
   findProfessorByResetToken,
   activateProfessor,
@@ -33,9 +36,13 @@ import {
   createEscola,
   listEscolas,
   deleteEscola,
+  requestProfessorPasswordReset,
+  resetProfessorPassword,
+  requestAdminPasswordReset,
+  resetAdminPassword,
 } from '../controller/users.js';
 import { assertEmail, assertNonEmptyString, assertPassword } from '../utils/validation.js';
-import { sendPasswordSetupEmail } from '../utils/email.js';
+import { sendPasswordSetupEmail, sendAdminSetupEmail, sendPasswordResetEmail } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -70,6 +77,74 @@ function signAlunoToken(aluno) {
     expiresIn: process.env.JWT_EXPIRES_IN || '1h',
   });
 }
+
+router.post(
+  '/admin/invite',
+  authenticateToken,
+  asyncHandler(async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+    }
+
+    const email = assertEmail(req.body?.email);
+
+    if (await adminEmailTaken(email)) {
+      const err = new Error('Email já cadastrado');
+      err.status = 409;
+      throw err;
+    }
+
+    const { token } = await inviteAdmin(email);
+    await sendAdminSetupEmail(email, token);
+    res.status(201).json({ status: 201, message: 'Administrador convidado com sucesso. E-mail enviado.' });
+  })
+);
+
+router.post(
+  '/admin/forgot-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const email = assertEmail(req.body?.email);
+    const token = await requestAdminPasswordReset(email);
+    if (token) {
+      await sendPasswordResetEmail(email, token, 'admin');
+    }
+    res.json({ status: 200, message: 'Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.' });
+  })
+);
+
+router.post(
+  '/admin/reset-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const token = assertNonEmptyString(req.body?.token, 'token');
+    const password = assertPassword(req.body?.password);
+
+    const ok = await resetAdminPassword(token, password);
+    if (!ok) {
+      return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+    }
+    res.json({ status: 200, message: 'Senha redefinida com sucesso. Você já pode fazer login.' });
+  })
+);
+
+router.post(
+  '/admin/set-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const token = assertNonEmptyString(req.body?.token, 'token');
+    const name = assertNonEmptyString(req.body?.name, 'name');
+    const password = assertPassword(req.body?.password);
+
+    const admin = await findAdminByResetToken(token);
+    if (!admin) {
+      return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+    }
+
+    await activateAdmin(admin.id, name, password);
+    res.json({ status: 200, message: 'Senha definida com sucesso. Você já pode fazer login.' });
+  })
+);
 
 router.post(
   '/admin/register',
@@ -124,6 +199,35 @@ router.post(
 
     const token = signProfessorToken(result);
     res.json({ status: 200, token });
+  })
+);
+
+router.post(
+  '/professor/forgot-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const email = assertEmail(req.body?.email);
+    const token = await requestProfessorPasswordReset(email);
+    // Sempre retorna sucesso para evitar enumeração de usuários
+    if (token) {
+      await sendPasswordResetEmail(email, token, 'professor');
+    }
+    res.json({ status: 200, message: 'Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.' });
+  })
+);
+
+router.post(
+  '/professor/reset-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const token = assertNonEmptyString(req.body?.token, 'token');
+    const password = assertPassword(req.body?.password);
+
+    const ok = await resetProfessorPassword(token, password);
+    if (!ok) {
+      return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+    }
+    res.json({ status: 200, message: 'Senha redefinida com sucesso. Você já pode fazer login.' });
   })
 );
 
