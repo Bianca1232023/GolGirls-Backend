@@ -40,7 +40,7 @@ import {
   resetProfessorPassword,
   requestAdminPasswordReset,
   resetAdminPassword,
-} from '../controller/users.js';
+} from '../controllers/users.js';
 import { assertEmail, assertNonEmptyString, assertPassword } from '../utils/validation.js';
 import { sendPasswordSetupEmail, sendAdminSetupEmail, sendPasswordResetEmail } from '../utils/email.js';
 
