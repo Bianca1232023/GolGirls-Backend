@@ -1,127 +1,110 @@
 # ⚽ Gol Girls Backend
-
 A iniciativa Gol Girls existe para promover o empoderamento de meninas negras, usando o esporte como uma ferramenta poderosa para abrir portas e realizar sonhos. Focamos em meninas negras e periféricas, pois queremos fortalecê-las em seu caminho de descoberta do mundo, construção da autoestima e ocupação de todos os espaços.
 
-Este repositório contém a API backend do projeto Gol Girls, construída com Node.js, Express e MySQL.
+API backend do projeto GoLGirls, construída com Node.js e Express, com persistência em MySQL.
 
-## 🧠 O que a API precisa
+## Requisitos
 
-- Node.js 20.x 
+- Node.js 20.x
 - npm 9+
-- MySQL 8 em execução localmente ou via Docker
-- Uma variável `JWT_SECRET` com pelo menos 32 caracteres
+- MySQL 8+
 
-## Estrutura do backend
+## Instalação
 
-- `src/app.js`: inicialização do servidor, middlewares e rotas
-- `src/configdb.js`: configuração da conexão com o MySQL
-- `src/routes/`: definição das rotas da API
-- `src/controller/`: lógica de criação de tabelas e regras da aplicação
-
-## ⚙️ Passo a passo para rodar em desenvolvimento
-
-1. Entre na pasta do backend:
-
-```bash
-cd GoGirls-Backend
-```
-
-2. Instale as dependências:
+1. Instale as dependências:
 
 ```bash
 npm install
 ```
 
-3. Crie um arquivo `.env` na raiz do projeto com as variáveis abaixo:
+2. Crie um arquivo `.env` na raiz do projeto baseado nas variáveis abaixo:
 
 ```env
-PORT=3001
+# Banco de dados
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=gogirls
-DB_PASSWORD=gogirls
-DB_NAME=gogirls
-JWT_SECRET=troque-este-segredo-por-um-valor-longo-aleatorio
+DB_USER=golgirls
+DB_PASSWORD=sua_senha
+DB_NAME=golgirls
+
+# JWT
+JWT_SECRET=gere-com-openssl-rand-hex-32   # mínimo 32 caracteres
+JWT_EXPIRES_IN=1h
+
+# E-mail (SMTP)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu@email.com
+SMTP_PASS=sua_senha_smtp
+SMTP_FROM=noreply@example.com
+
+# Frontend (para links nos e-mails)
+APP_URL=http://localhost:3001
+
+# CORS (defina a origem permitida em produção)
+CORS_ORIGIN=http://localhost:5173
 ```
 
-4. Comando para gerar a chave JWT_SECRET
-- Depois copie e cole a chave gerada no .env: JWT_SECRET=troque-este-segredo-por-um-valor-longo-aleatorio
-- Se `JWT_SECRET` tiver menos de 32 caracteres, a aplicação não inicia.
+## Executar em desenvolvimento
+
+Use o script de desenvolvimento com nodemon:
+
 ```bash
-openssl rand -hex 32
+npm run dev
 ```
 
-## ☁️ Passo a passo rodar usando Docker
+## Dependências
 
-1. Entre na pasta do backend:
+### dotenv
 
-```bash
-cd GoGirls-Backend
-```
+- Função: carregar variáveis de ambiente a partir de um arquivo .env.
+- Onde é útil: configuração de porta, segredos de token e demais credenciais fora do código.
 
-2. Suba o banco e a API com Docker Compose:
+### express
+
+- Função: framework HTTP para criação da API.
+- Onde é útil: criação de rotas, middlewares, parsing de JSON e tratamento de requisições/respostas.
+
+### jsonwebtoken
+
+- Função: criação e validação de tokens JWT.
+- Onde é útil: autenticação e autorização de usuários na API.
+
+### mysql2
+
+- Função: driver MySQL para Node.js com suporte a promises e prepared statements.
+- Onde é útil: todas as queries ao banco de dados, prevenindo SQL injection por padrão.
+
+### nodemailer
+
+- Função: envio de e-mails via SMTP.
+- Onde é útil: fluxos de convite, definição de senha e recuperação de senha.
+
+### bcryptjs
+
+- Função: hash seguro de senhas.
+- Onde é útil: cadastro e login de admins e professores.
+
+### helmet
+
+- Função: aplica headers HTTP de segurança.
+- Onde é útil: proteção contra ataques comuns (XSS, clickjacking etc.).
+
+### express-rate-limit
+
+- Função: limitação de requisições por IP.
+- Onde é útil: rotas de autenticação (login, esqueci minha senha) para mitigar brute-force.
+
+## Execução com Docker
 
 ```bash
 docker compose up --build
 ```
 
-3. Depois para roda em modo normal:
+A API ficará disponível em `http://localhost:3001` e a documentação Swagger em `http://localhost:3001/api-docs`.
 
-```bash
-docker compose up
-```
+## Primeiro acesso
 
-4. Quando quiser parar os containers:
+Somente quando o banco estiver vazio é possível criar o primeiro admin via `POST /admin/register`. A partir daí, novos admins devem ser criados pelo fluxo de convite (`POST /admin/invite`).
 
-```bash
-docker compose down
-```
-
-5. Se quiser rodar em background:
-
-```bash
-docker compose up --build -d
-```
-
-6. Ver status:
-
-```bash
-docker compose ps
-```
-
-7. Ver logs do backend:
-
-```bash
-docker compose logs -f backend
-```
-
-8. Limpar cache do Docker:
-
-```bash
-docker builder prune -a
-```
-
-9. Limpar imagens e volumes:
-
-```bash
-docker system prune -a --volumes
-```
-
-## 🌐 Como validar se esta funcionando:
-
-```bash
-http://localhost:3001
-```
-
-A documentação da API está disponível em:
-
-```bash
-http://localhost:3001/api-docs
-```
-
-## Variáveis de ambiente importantes
-
-- `PORT`: porta da API. No projeto, `3001` facilita a integração com o frontend.
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: conexão com o MySQL.
-- `JWT_SECRET`: chave usada para assinar e validar tokens.
-- `CORS_ORIGIN`: origem permitida para chamadas do frontend, se necessário.

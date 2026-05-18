@@ -18,7 +18,7 @@ export async function sendPasswordSetupEmail(to, token) {
     subject: 'GolGirls – Defina sua senha de acesso',
     html: `
       <p>Olá!</p>
-      <p>Você foi convidada(o) como professor(a) na plataforma <strong>GoGirls</strong>.</p>
+      <p>Você foi convidada(o) como professor(a) na plataforma <strong>GoLGirls</strong>.</p>
       <p>Clique no link abaixo para informar seu <strong>nome completo</strong> e criar sua senha de acesso:</p>
       <p><a href="${link}">${link}</a></p>
       <p>Este link expira em <strong>24 horas</strong>.</p>
@@ -35,7 +35,7 @@ export async function sendAdminSetupEmail(to, token) {
     subject: 'GolGirls – Cadastro de Administrador',
     html: `
       <p>Olá!</p>
-      <p>Você foi convidado(a) como <strong>administrador(a)</strong> na plataforma <strong>GoGirls</strong>.</p>
+      <p>Você foi convidado(a) como <strong>administrador(a)</strong> na plataforma <strong>GoLGirls</strong>.</p>
       <p>Clique no link abaixo para informar seu <strong>nome completo</strong> e criar sua senha de acesso:</p>
       <p><a href="${link}">${link}</a></p>
       <p>Este link expira em <strong>24 horas</strong>.</p>
@@ -53,7 +53,7 @@ export async function sendPasswordResetEmail(to, token, role) {
     subject: 'GolGirls – Redefinição de senha',
     html: `
       <p>Olá!</p>
-      <p>Recebemos uma solicitação para redefinir a senha da sua conta na plataforma <strong>GoGirls</strong>.</p>
+      <p>Recebemos uma solicitação para redefinir a senha da sua conta na plataforma <strong>GoLGirls</strong>.</p>
       <p>Clique no link abaixo para criar uma nova senha:</p>
       <p><a href="${link}">${link}</a></p>
       <p>Este link expira em <strong>1 hora</strong>.</p>

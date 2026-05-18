@@ -2,17 +2,18 @@ import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
-import routes from './routes/routes.js';
 import swaggerSpec from './docs/swagger.js';
-import {
-  createTableAdmin,
-  createTableProfessor,
-  createTableTurmas,
-  createTableProfessorTurmas,
-  createTableNucleos,
-  createTableEscolas,
-  createTableAlunos,
-} from './controller/users.js';
+
+import prisma from './models/prisma.js';
+
+// Rotas
+import { adminAuthRouter, adminCrudRouter } from './routes/adminRoutes.js';
+import professorRoutes from './routes/professorRoutes.js';
+import alunoRoutes from './routes/alunoRoutes.js';
+import turmaRoutes from './routes/turmaRoutes.js';
+import nucleoRoutes from './routes/nucleoRoutes.js';
+import escolaRoutes from './routes/escolaRoutes.js';
+import adminExtrasRoutes from './routes/adminExtrasRoutes.js';
 
 const app = express();
 
@@ -35,19 +36,31 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (_req, res) => {
-  res.json({ status: 200, service: 'gogirls-backend' });
+  res.json({ status: 200, service: 'golgirls-backend' });
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(routes);
+// Rotas por domínio
+app.use('/admin', adminAuthRouter);
+app.use('/admin', adminExtrasRoutes);
+app.use('/admins', adminCrudRouter);
+app.use('/professor', professorRoutes);
+app.use('/aluno', alunoRoutes);
+app.use('/alunos', alunoRoutes);
+app.use('/admin/turmas', turmaRoutes);
+app.use('/turmas', turmaRoutes);
+app.use('/admin/nucleos', nucleoRoutes);
+app.use('/nucleos', nucleoRoutes);
+app.use('/admin/escolas', escolaRoutes);
+app.use('/escolas', escolaRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ status: 404, message: 'Rota não encontrada' });
 });
 
 app.use((err, _req, res, _next) => {
-  const isDupEntry = err.code === 'ER_DUP_ENTRY';
+  const isDupEntry = err.code === 'ER_DUP_ENTRY' || err.code === 'P2002';
   const status = err.status || err.statusCode || (isDupEntry ? 409 : 500);
   const message = isDupEntry
     ? 'Dados em conflito com regras do banco (ex.: email duplicado)'
@@ -78,13 +91,7 @@ function assertJwtSecret() {
 
 async function start() {
   assertJwtSecret();
-  await createTableAdmin();
-  await createTableTurmas();
-  await createTableProfessor();
-  await createTableProfessorTurmas();
-  await createTableNucleos();
-  await createTableEscolas();
-  await createTableAlunos();
+  await prisma.$connect();
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
