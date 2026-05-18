@@ -24,7 +24,6 @@ router.post('/forgot-password', authLimiter, asyncHandler(ctrl.forgotPassword));
 router.post('/reset-password', authLimiter, asyncHandler(ctrl.resetPassword));
 router.post('/set-password', authLimiter, asyncHandler(ctrl.setPassword));
 
-router.post('/createturma', authenticateToken, asyncHandler(turmaCtrl.create));
 router.get('/turmas', authenticateToken, asyncHandler(turmaCtrl.listByProfessor));
 
 router.post('/createaluno', authenticateToken, asyncHandler(alunoCtrl.create));

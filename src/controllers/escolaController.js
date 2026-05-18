@@ -6,7 +6,8 @@ export async function create(req, res) {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
   const nome = assertNonEmptyString(req.body?.nome, 'nome');
-  const escola = await escolaService.create(nome);
+  const endereco = req.body?.endereco ? String(req.body.endereco) : undefined;
+  const escola = await escolaService.create(nome, endereco);
   res.status(201).json({ status: 201, escola });
 }
 

@@ -6,7 +6,8 @@ export async function create(req, res) {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
   const nome = assertNonEmptyString(req.body?.nome, 'nome');
-  const nucleo = await nucleoService.create(nome);
+  const localizacao = req.body?.localizacao ? String(req.body.localizacao) : undefined;
+  const nucleo = await nucleoService.create(nome, localizacao);
   res.status(201).json({ status: 201, nucleo });
 }
 

@@ -6,9 +6,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'GoGirls Backend API',
+      title: 'GoLGirls Backend API',
       version: '1.0.0',
-      description: 'Documentação da API do projeto GoGirls Backend.',
+      description: 'Documentação da API do projeto GoLGirls Backend.',
     },
     servers: [
       {

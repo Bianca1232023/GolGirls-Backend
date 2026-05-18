@@ -3,10 +3,10 @@ services:
     image: mysql:8
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${DB_NAME:-gogirls}
-      MYSQL_USER: ${DB_USER:-gogirls}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-gogirls}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -26,10 +26,11 @@ services:
       PORT: 3001
       DB_HOST: db
       DB_PORT: 3306
-      DB_USER: ${DB_USER:-gogirls}
-      DB_PASSWORD: ${DB_PASSWORD:-gogirls}
-      DB_NAME: ${DB_NAME:-gogirls}
-      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-por-um-valor-longo-aleatorio-em-producao-min-32-chars}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DATABASE_URL: mysql://${DB_USER}:${DB_PASSWORD}@db:3306/${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
 
 volumes:
   mysql_data:

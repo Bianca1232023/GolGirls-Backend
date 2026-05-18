@@ -1,23 +1,17 @@
-import pool from '../configDB.js';
+import prisma from '../models/prisma.js';
 
 export async function createTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS escolas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL UNIQUE
-  )`);
+  // no-op: schema gerenciado por `npx prisma migrate dev`
 }
 
-export async function create(nome) {
-  const [result] = await pool.query('INSERT INTO escolas (nome) VALUES (?)', [nome]);
-  return { id: result.insertId, nome };
+export async function create(nome, endereco) {
+  return prisma.escola.create({ data: { nome, endereco: endereco ?? null } });
 }
 
 export async function findAll() {
-  const [rows] = await pool.query('SELECT id, nome FROM escolas ORDER BY nome');
-  return rows;
+  return prisma.escola.findMany({ select: { id: true, nome: true }, orderBy: { nome: 'asc' } });
 }
 
 export async function remove(id) {
-  const [result] = await pool.query('DELETE FROM escolas WHERE id = ?', [id]);
-  return result;
+  return prisma.escola.delete({ where: { id } });
 }

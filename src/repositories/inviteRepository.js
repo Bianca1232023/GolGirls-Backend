@@ -1,40 +1,34 @@
-import pool from '../configDB.js';
+import prisma from '../models/prisma.js';
 
 export async function createTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS invites (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    role ENUM('professor','admin') NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`);
+  // no-op: schema gerenciado por `npx prisma migrate dev`
 }
 
 export async function create(email, role) {
-  const [result] = await pool.query(
-    'INSERT INTO invites (email, role) VALUES (?, ?)',
-    [email, role]
-  );
-  return result.insertId;
+  const invite = await prisma.invite.create({ data: { email, role } });
+  return invite.id;
 }
 
 export async function findAll() {
-  const [rows] = await pool.query(`
-    SELECT
-      i.id,
-      i.email,
-      i.role,
-      i.created_at,
-      CASE
-        WHEN i.role = 'professor' THEN
-          IFNULL((SELECT CASE WHEN p.ativo = TRUE THEN 'aceito' ELSE 'pendente' END
-                  FROM professors p WHERE p.email = i.email LIMIT 1), 'pendente')
-        WHEN i.role = 'admin' THEN
-          IFNULL((SELECT CASE WHEN a.ativo = TRUE THEN 'aceito' ELSE 'pendente' END
-                  FROM admins a WHERE a.email = i.email LIMIT 1), 'pendente')
-        ELSE 'pendente'
-      END AS status
-    FROM invites i
-    ORDER BY i.created_at DESC
-  `);
-  return rows;
+  const invites = await prisma.invite.findMany({ orderBy: { created_at: 'desc' } });
+
+  return Promise.all(
+    invites.map(async (invite) => {
+      let status = 'pendente';
+      if (invite.role === 'professor') {
+        const p = await prisma.professor.findFirst({
+          where: { email: invite.email },
+          select: { ativo: true },
+        });
+        if (p) status = p.ativo ? 'aceito' : 'pendente';
+      } else if (invite.role === 'admin') {
+        const a = await prisma.admin.findFirst({
+          where: { email: invite.email },
+          select: { ativo: true },
+        });
+        if (a) status = a.ativo ? 'aceito' : 'pendente';
+      }
+      return { ...invite, status };
+    })
+  );
 }

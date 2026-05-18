@@ -1,7 +1,7 @@
 import * as nucleoRepo from '../repositories/nucleoRepository.js';
 
-export async function create(nome) {
-  return nucleoRepo.create(nome);
+export async function create(nome, localizacao) {
+  return nucleoRepo.create(nome, localizacao);
 }
 
 export async function getAll() {

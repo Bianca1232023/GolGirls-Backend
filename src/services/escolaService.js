@@ -1,7 +1,7 @@
 import * as escolaRepo from '../repositories/escolaRepository.js';
 
-export async function create(nome) {
-  return escolaRepo.create(nome);
+export async function create(nome, endereco) {
+  return escolaRepo.create(nome, endereco);
 }
 
 export async function getAll() {

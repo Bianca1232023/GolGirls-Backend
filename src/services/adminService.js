@@ -59,6 +59,10 @@ export async function emailTaken(email) {
   return adminRepo.emailTaken(email);
 }
 
+export async function countAdmins() {
+  return adminRepo.countActive();
+}
+
 export async function getAll(id) {
   return adminRepo.findAll(id);
 }
@@ -70,22 +74,20 @@ export async function update(id, { name, email, password }) {
 
 export async function updatePartial(id, body) {
   const allowed = ['name', 'email', 'password'];
-  const updates = [];
-  const values = [];
+  const data = {};
   for (const key of allowed) {
     if (Object.prototype.hasOwnProperty.call(body, key) && body[key] != null) {
-      updates.push(`${key} = ?`);
       if (key === 'password') {
         const p = String(body[key]);
         if (p.length < 8) return { error: 'password deve ter no mínimo 8 caracteres' };
-        values.push(await bcrypt.hash(p, BCRYPT_ROUNDS));
+        data.password = await bcrypt.hash(p, BCRYPT_ROUNDS);
       } else {
-        values.push(String(body[key]));
+        data[key] = String(body[key]);
       }
     }
   }
-  if (updates.length === 0) return { error: 'Nenhum campo válido para atualizar' };
-  return adminRepo.updatePartial(id, updates, values);
+  if (Object.keys(data).length === 0) return { error: 'Nenhum campo válido para atualizar' };
+  return adminRepo.updatePartial(id, data);
 }
 
 export async function remove(id) {

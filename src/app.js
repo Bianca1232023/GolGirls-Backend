@@ -4,14 +4,7 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './docs/swagger.js';
 
-// Repositories (para criação de tabelas)
-import * as adminRepo from './repositories/adminRepository.js';
-import * as professorRepo from './repositories/professorRepository.js';
-import * as turmaRepo from './repositories/turmaRepository.js';
-import * as nucleoRepo from './repositories/nucleoRepository.js';
-import * as escolaRepo from './repositories/escolaRepository.js';
-import * as alunoRepo from './repositories/alunoRepository.js';
-import * as inviteRepo from './repositories/inviteRepository.js';
+import prisma from './models/prisma.js';
 
 // Rotas
 import { adminAuthRouter, adminCrudRouter } from './routes/adminRoutes.js';
@@ -43,7 +36,7 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (_req, res) => {
-  res.json({ status: 200, service: 'gogirls-backend' });
+  res.json({ status: 200, service: 'golgirls-backend' });
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -67,7 +60,7 @@ app.use((_req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
-  const isDupEntry = err.code === 'ER_DUP_ENTRY';
+  const isDupEntry = err.code === 'ER_DUP_ENTRY' || err.code === 'P2002';
   const status = err.status || err.statusCode || (isDupEntry ? 409 : 500);
   const message = isDupEntry
     ? 'Dados em conflito com regras do banco (ex.: email duplicado)'
@@ -98,14 +91,7 @@ function assertJwtSecret() {
 
 async function start() {
   assertJwtSecret();
-  await adminRepo.createTable();
-  await turmaRepo.createTable();
-  await professorRepo.createTable();
-  await turmaRepo.createTableProfessorTurmas();
-  await nucleoRepo.createTable();
-  await escolaRepo.createTable();
-  await alunoRepo.createTable();
-  await inviteRepo.createTable();
+  await prisma.$connect();
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });

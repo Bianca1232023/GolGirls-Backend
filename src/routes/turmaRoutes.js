@@ -8,7 +8,11 @@ function asyncHandler(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
+router.post('/', authenticateToken, asyncHandler(ctrl.create));
 router.get('/', authenticateToken, asyncHandler(ctrl.listAll));
+router.get('/vinculos', authenticateToken, asyncHandler(ctrl.listVinculos));
+router.post('/:id/professores', authenticateToken, asyncHandler(ctrl.linkProfessorToTurma));
 router.get('/:id/alunos', authenticateToken, asyncHandler(ctrl.getAlunosByTurma));
+router.delete('/:id', authenticateToken, asyncHandler(ctrl.remove));
 
 export default router;
