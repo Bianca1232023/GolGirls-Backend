@@ -29,10 +29,30 @@ export async function linkProfessor(professorId, turmaId) {
 export async function findByProfessor(professorId) {
   const vinculos = await prisma.professorTurma.findMany({
     where: { professor_id: professorId },
-    include: { turma: { select: { id: true, nome: true } } },
+    include: {
+      turma: {
+        select: {
+          id: true,
+          nome: true,
+          capacidade: true,
+          escola: { select: { id: true, nome: true, endereco: true } },
+          nucleo: { select: { id: true, nome: true, localizacao: true } },
+        },
+      },
+    },
     orderBy: { turma: { id: 'asc' } },
   });
-  return vinculos.map((v) => v.turma);
+  return vinculos.map((v) => ({
+    id: v.turma.id,
+    nome: v.turma.nome,
+    capacidade: v.turma.capacidade,
+    escola_id: v.turma.escola?.id ?? null,
+    escola_nome: v.turma.escola?.nome ?? null,
+    escola_endereco: v.turma.escola?.endereco ?? null,
+    nucleo_id: v.turma.nucleo?.id ?? null,
+    nucleo_nome: v.turma.nucleo?.nome ?? null,
+    nucleo_localizacao: v.turma.nucleo?.localizacao ?? null,
+  }));
 }
 
 export async function professorOwnsTurma(professorId, turmaId) {
@@ -49,8 +69,8 @@ export async function findById(id) {
 export async function findAll() {
   const turmas = await prisma.turma.findMany({
     include: {
-      escola: { select: { id: true, nome: true } },
-      nucleo: { select: { id: true, nome: true } },
+      escola: { select: { id: true, nome: true, endereco: true } },
+      nucleo: { select: { id: true, nome: true, localizacao: true } },
       professores: { include: { professor: { select: { name: true } } } },
     },
     orderBy: { id: 'asc' },
@@ -61,8 +81,10 @@ export async function findAll() {
     capacidade: t.capacidade,
     escola_id: t.escola?.id ?? null,
     escola_nome: t.escola?.nome ?? null,
+    escola_endereco: t.escola?.endereco ?? null,
     nucleo_id: t.nucleo?.id ?? null,
     nucleo_nome: t.nucleo?.nome ?? null,
+    nucleo_localizacao: t.nucleo?.localizacao ?? null,
     professores: t.professores.map((pt) => pt.professor.name).filter(Boolean).join(', ') || null,
   }));
 }
