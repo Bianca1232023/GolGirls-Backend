@@ -9,6 +9,7 @@ node_modules/
 # SQLite / dados locais
 *.db
 data/
+database.db
 
 # Logs
 npm-debug.log*
