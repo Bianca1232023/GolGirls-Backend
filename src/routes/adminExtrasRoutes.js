@@ -3,6 +3,7 @@ import authenticateToken from '../middleware/auth.js';
 import * as ctrl from '../controllers/inviteController.js';
 import * as professorCtrl from '../controllers/professorController.js';
 import * as professorService from '../services/professorService.js';
+import * as presencaCtrl from '../controllers/presencaController.js';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.get('/invites', authenticateToken, asyncHandler(ctrl.listAll));
 
 // Corpo docente
 router.get('/team', authenticateToken, asyncHandler(ctrl.listTeam));
+router.get('/relatorios', authenticateToken, asyncHandler(presencaCtrl.relatoriosAdmin));
 
 // Criar professor (convite por admin)
 router.post('/createprofessor', authenticateToken, asyncHandler(professorCtrl.createProfessor));

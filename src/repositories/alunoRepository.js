@@ -16,8 +16,19 @@ export async function create(data) {
       bairro: data.bairro,
       turma_id: data.turma_id ?? null,
       escola_id: data.escola_id ?? null,
+      telefone_aluna: data.telefone_aluna ?? null,
+      nome_responsavel: data.nome_responsavel ?? null,
+      telefone_responsavel: data.telefone_responsavel ?? null,
     },
   });
+}
+
+export async function findById(id) {
+  const a = await prisma.aluno.findUnique({
+    where: { id },
+    include: alunoInclude,
+  });
+  return a ? formatAluno(a) : null;
 }
 
 export async function findByMatricula(matricula) {
@@ -36,6 +47,9 @@ function formatAluno(a) {
     ativo: a.ativo,
     dia_aula: a.dia_aula,
     bairro: a.bairro,
+    telefone_aluna: a.telefone_aluna ?? null,
+    nome_responsavel: a.nome_responsavel ?? null,
+    telefone_responsavel: a.telefone_responsavel ?? null,
     nucleo_id: a.nucleo?.id ?? null,
     nucleo: a.nucleo?.nome ?? null,
     escola_id: a.escola?.id ?? null,

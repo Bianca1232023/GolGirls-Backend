@@ -90,6 +90,37 @@ const options = {
             escola_id: { type: 'integer', example: 2 },
             bairro: { type: 'string', example: 'Centro' },
             turma_id: { type: 'integer', example: 3 },
+            idade: { type: 'integer', example: 12 },
+            telefone_aluna: { type: 'string', example: '21999999999' },
+            nome_responsavel: { type: 'string', example: 'Maria Santos' },
+            telefone_responsavel: { type: 'string', example: '21988888888' },
+          },
+        },
+        ChamadaInput: {
+          type: 'object',
+          required: ['turma_id', 'data_aula', 'registros'],
+          properties: {
+            turma_id: { type: 'integer', example: 1 },
+            data_aula: { type: 'string', format: 'date', example: '2026-05-22' },
+            registros: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['aluno_id', 'presente'],
+                properties: {
+                  aluno_id: { type: 'integer', example: 1 },
+                  presente: { type: 'boolean', example: true },
+                },
+              },
+            },
+          },
+        },
+        SendInviteInput: {
+          type: 'object',
+          required: ['email', 'role'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'professor@example.com' },
+            role: { type: 'string', enum: ['professor', 'admin'], example: 'professor' },
           },
         },
         CreateTurmaInput: {
@@ -402,25 +433,6 @@ const options = {
       },
 
       // ── Turmas ──────────────────────────────────────────────────────────────
-      '/professor/createturma': {
-        post: {
-          tags: ['Turmas'],
-          summary: 'Cria turma (professor)',
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/CreateTurmaInput' },
-              },
-            },
-          },
-          responses: {
-            201: { description: 'Turma criada com sucesso' },
-            403: { description: 'Acesso restrito a professores' },
-          },
-        },
-      },
       '/professor/turmas': {
         get: {
           tags: ['Turmas'],
@@ -442,18 +454,58 @@ const options = {
             403: { description: 'Acesso restrito a administradores' },
           },
         },
+        post: {
+          tags: ['Turmas'],
+          summary: 'Cria turma (admin)',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['nome'],
+                  properties: {
+                    nome: { type: 'string' },
+                    escola_id: { type: 'integer' },
+                    nucleo_id: { type: 'integer' },
+                    capacidade: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Turma criada' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
       },
       '/turmas/{id}/alunos': {
         get: {
           tags: ['Turmas'],
-          summary: 'Lista alunos de uma turma (admin ou professor)',
+          summary: 'Lista alunos de uma turma (autenticado)',
           security: [{ bearerAuth: [] }],
           parameters: [
             { in: 'path', name: 'id', required: true, schema: { type: 'integer' }, description: 'ID da turma' },
           ],
           responses: {
             200: { description: 'Lista de alunos da turma' },
-            403: { description: 'Acesso restrito a administradores e professores' },
+            403: { description: 'Acesso restrito' },
+          },
+        },
+      },
+      '/admin/turmas/{id}/alunos': {
+        get: {
+          tags: ['Turmas'],
+          summary: 'Lista alunos de uma turma (admin)',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'integer' }, description: 'ID da turma' },
+          ],
+          responses: {
+            200: { description: 'Lista de alunos da turma' },
+            403: { description: 'Acesso restrito a administradores' },
           },
         },
       },
@@ -523,6 +575,23 @@ const options = {
             200: { description: 'Aluno movido para a turma com sucesso' },
             400: { description: 'turma_id é obrigatório' },
             403: { description: 'Acesso restrito a professores / turma não pertence ao professor' },
+          },
+        },
+      },
+      '/aluno': {
+        get: {
+          tags: ['Alunos'],
+          summary: 'Lista alunos (alias de /alunos)',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'query', name: 'turma_id', schema: { type: 'integer' }, required: false },
+            { in: 'query', name: 'nucleo_id', schema: { type: 'integer' }, required: false },
+            { in: 'query', name: 'escola_id', schema: { type: 'integer' }, required: false },
+            { in: 'query', name: 'bairro', schema: { type: 'string' }, required: false },
+          ],
+          responses: {
+            200: { description: 'Lista de alunos' },
+            403: { description: 'Acesso restrito a professores e administradores' },
           },
         },
       },
@@ -630,6 +699,244 @@ const options = {
           responses: {
             200: { description: 'Escola removida com sucesso' },
             403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+
+      // ── Refresh token ───────────────────────────────────────────────────────
+      '/admin/refresh': {
+        post: {
+          tags: ['Auth — Refresh'],
+          summary: 'Renova JWT de admin (header Authorization com token atual)',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Novo token JWT' },
+            401: { description: 'Token não fornecido' },
+            403: { description: 'Sessão expirada ou token inválido' },
+          },
+        },
+      },
+      '/professor/refresh': {
+        post: {
+          tags: ['Auth — Refresh'],
+          summary: 'Renova JWT de professor',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Novo token JWT' },
+            403: { description: 'Sessão expirada ou token inválido' },
+          },
+        },
+      },
+      '/aluno/refresh': {
+        post: {
+          tags: ['Auth — Refresh'],
+          summary: 'Renova JWT de aluno',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Novo token JWT' },
+            403: { description: 'Sessão expirada ou token inválido' },
+          },
+        },
+      },
+
+      // ── Admin extras ──────────────────────────────────────────────────────
+      '/admin/send-invite': {
+        post: {
+          tags: ['Admin — Convites'],
+          summary: 'Envia convite (professor ou admin)',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SendInviteInput' },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Convite enviado' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/invites': {
+        get: {
+          tags: ['Admin — Convites'],
+          summary: 'Lista convites enviados',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Lista de convites' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/team': {
+        get: {
+          tags: ['Admin — Equipe'],
+          summary: 'Lista equipe (professores e admins)',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Lista de membros' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/professors': {
+        get: {
+          tags: ['Admin — Equipe'],
+          summary: 'Lista professores (para selects)',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Lista de professores' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/professors/{id}': {
+        delete: {
+          tags: ['Admin — Equipe'],
+          summary: 'Remove professor',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'integer' } },
+          ],
+          responses: {
+            200: { description: 'Professor removido' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/relatorios': {
+        get: {
+          tags: ['Relatórios'],
+          summary: 'Relatório geral do sistema (admin)',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Estatísticas gerais' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+
+      '/admin/turmas/vinculos': {
+        get: {
+          tags: ['Turmas'],
+          summary: 'Lista vínculos professor-turma',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Lista de vínculos' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/turmas/{id}/professores': {
+        post: {
+          tags: ['Turmas'],
+          summary: 'Vincula professor à turma',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'integer' } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['professor_id'],
+                  properties: { professor_id: { type: 'integer' } },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'Professor vinculado' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/admin/turmas/{id}': {
+        delete: {
+          tags: ['Turmas'],
+          summary: 'Remove turma (admin)',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'integer' } },
+          ],
+          responses: {
+            200: { description: 'Turma removida' },
+            403: { description: 'Acesso restrito a administradores' },
+          },
+        },
+      },
+      '/turmas': {
+        get: {
+          tags: ['Turmas'],
+          summary: 'Lista turmas (autenticado)',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Lista de turmas' },
+          },
+        },
+      },
+
+      // ── Professor — chamada e relatórios ────────────────────────────────────
+      '/professor/chamada': {
+        post: {
+          tags: ['Presença — Chamada'],
+          summary: 'Registra chamada de presença da turma',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChamadaInput' },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Chamada registrada' },
+            400: { description: 'Dados inválidos' },
+            403: { description: 'Turma não pertence ao professor' },
+          },
+        },
+      },
+      '/professor/relatorios': {
+        get: {
+          tags: ['Relatórios'],
+          summary: 'Relatórios de presença do professor',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'query', name: 'turma_id', schema: { type: 'integer' }, required: false },
+          ],
+          responses: {
+            200: { description: 'Relatório por turma ou consolidado' },
+            403: { description: 'Acesso restrito a professores' },
+          },
+        },
+      },
+
+      // ── Aluno — portal ──────────────────────────────────────────────────────
+      '/aluno/me': {
+        get: {
+          tags: ['Aluno — Portal'],
+          summary: 'Perfil da aluna autenticada',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Dados do perfil' },
+            403: { description: 'Acesso restrito a alunas' },
+            404: { description: 'Aluna não encontrada' },
+          },
+        },
+      },
+      '/aluno/jornada': {
+        get: {
+          tags: ['Aluno — Portal'],
+          summary: 'Jornada, presenças e conquistas da aluna',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: 'Dados da jornada' },
+            403: { description: 'Acesso restrito a alunas' },
           },
         },
       },

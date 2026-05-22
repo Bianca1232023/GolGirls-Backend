@@ -1,21 +1,62 @@
-# Dependencies
+# deps
 node_modules/
 
-# Environment and secrets
+# env
 .env
 .env.*
 !.env.example
 
-# SQLite / dados locais
+# build
+dist/
+build/
+out/
+
+# prisma (gerado)
+node_modules/.prisma/
+src/generated/prisma/
+prisma/generated/
+prisma/*.db
+prisma/*.db-journal
+
+# dados locais
 *.db
+*.db-journal
+*.sqlite
+*.sqlite3
 data/
 
-# Logs
+# testes
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# cache
+.cache/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# OS / editor
+# npm/yarn
+.npm/
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# SO / editor
 .DS_Store
 Thumbs.db
 .idea/

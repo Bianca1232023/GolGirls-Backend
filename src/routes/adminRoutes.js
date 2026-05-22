@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import authenticateToken from '../middleware/auth.js';
 import * as ctrl from '../controllers/adminController.js';
+import { refresh } from '../controllers/authRefreshController.js';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -23,6 +24,7 @@ adminAuthRouter.post('/reset-password', authLimiter, asyncHandler(ctrl.resetPass
 adminAuthRouter.post('/set-password', authLimiter, asyncHandler(ctrl.setPassword));
 adminAuthRouter.post('/register', authLimiter, asyncHandler(ctrl.register));
 adminAuthRouter.post('/login', authLimiter, asyncHandler(ctrl.login));
+adminAuthRouter.post('/refresh', asyncHandler(refresh));
 
 // /admins/* — CRUD routes
 export const adminCrudRouter = Router();

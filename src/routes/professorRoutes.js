@@ -4,6 +4,8 @@ import authenticateToken from '../middleware/auth.js';
 import * as ctrl from '../controllers/professorController.js';
 import * as turmaCtrl from '../controllers/turmaController.js';
 import * as alunoCtrl from '../controllers/alunoController.js';
+import * as presencaCtrl from '../controllers/presencaController.js';
+import { refresh } from '../controllers/authRefreshController.js';
 
 const router = Router();
 
@@ -23,8 +25,11 @@ router.post('/login', authLimiter, asyncHandler(ctrl.login));
 router.post('/forgot-password', authLimiter, asyncHandler(ctrl.forgotPassword));
 router.post('/reset-password', authLimiter, asyncHandler(ctrl.resetPassword));
 router.post('/set-password', authLimiter, asyncHandler(ctrl.setPassword));
+router.post('/refresh', asyncHandler(refresh));
 
 router.get('/turmas', authenticateToken, asyncHandler(turmaCtrl.listByProfessor));
+router.get('/relatorios', authenticateToken, asyncHandler(presencaCtrl.relatoriosProfessor));
+router.post('/chamada', authenticateToken, asyncHandler(presencaCtrl.registrarChamada));
 
 router.post('/createaluno', authenticateToken, asyncHandler(alunoCtrl.create));
 router.patch('/alunos/:id/turma', authenticateToken, asyncHandler(alunoCtrl.updateTurma));

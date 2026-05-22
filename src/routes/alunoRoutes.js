@@ -18,6 +18,9 @@ function asyncHandler(fn) {
 }
 
 router.post('/login', authLimiter, asyncHandler(ctrl.login));
+router.post('/refresh', asyncHandler(ctrl.refresh));
+router.get('/me', authenticateToken, asyncHandler(ctrl.me));
+router.get('/jornada', authenticateToken, asyncHandler(ctrl.jornada));
 router.get('/', authenticateToken, asyncHandler(ctrl.listAlunos));
 
 export default router;

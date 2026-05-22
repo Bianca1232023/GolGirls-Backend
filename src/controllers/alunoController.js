@@ -1,13 +1,8 @@
-import jwt from 'jsonwebtoken';
 import * as alunoService from '../services/alunoService.js';
 import * as turmaService from '../services/turmaService.js';
 import { assertNonEmptyString } from '../utils/validation.js';
-
-function signToken(aluno) {
-  return jwt.sign({ id: aluno.id, role: 'aluno' }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
-  });
-}
+import { issueToken } from '../utils/jwtTokens.js';
+import { refreshAccessToken } from '../utils/jwtTokens.js';
 
 export async function create(req, res) {
   if (req.user?.role !== 'professor') {
@@ -37,7 +32,19 @@ export async function create(req, res) {
     return res.status(400).json({ status: 400, message: 'escola_id é obrigatório' });
   }
 
-  await alunoService.register({ nome, matricula, nucleo_id, bairro, escola_id, turma_id });
+  const idade = req.body?.idade != null ? Number(req.body.idade) : undefined;
+  await alunoService.register({
+    nome,
+    matricula,
+    nucleo_id,
+    bairro,
+    escola_id,
+    turma_id,
+    idade: idade && !isNaN(idade) ? idade : undefined,
+    telefone_aluna: req.body?.telefone_aluna?.trim() || null,
+    nome_responsavel: req.body?.nome_responsavel?.trim() || null,
+    telefone_responsavel: req.body?.telefone_responsavel?.trim() || null,
+  });
   res.status(201).json({ status: 201, message: 'Cadastro do aluno registrado com sucesso' });
 }
 
@@ -68,8 +75,41 @@ export async function login(req, res) {
   if (!aluno) {
     return res.status(401).json({ status: 401, message: 'Matrícula inválida' });
   }
-  const token = signToken(aluno);
-  res.json({ status: 200, token });
+  const token = issueToken({ id: aluno.id, role: 'aluno' });
+  res.json({ status: 200, token, aluno: { id: aluno.id, nome: aluno.nome, matricula: aluno.matricula } });
+}
+
+export async function me(req, res) {
+  if (req.user?.role !== 'aluno') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a alunas' });
+  }
+  const aluno = await alunoService.getProfile(req.user.id);
+  if (!aluno) {
+    return res.status(404).json({ status: 404, message: 'Aluna não encontrada' });
+  }
+  res.json({ status: 200, aluno });
+}
+
+export async function jornada(req, res) {
+  if (req.user?.role !== 'aluno') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a alunas' });
+  }
+  const data = await alunoService.getJornada(req.user.id);
+  if (!data) {
+    return res.status(404).json({ status: 404, message: 'Aluna não encontrada' });
+  }
+  res.json({ status: 200, ...data });
+}
+
+export async function refresh(req, res) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ status: 401, message: 'Token não fornecido' });
+  try {
+    const newToken = refreshAccessToken(token);
+    res.json({ status: 200, token: newToken });
+  } catch (err) {
+    res.status(err.status || 403).json({ status: err.status || 403, message: err.message });
+  }
 }
 
 export async function listAlunos(req, res) {

@@ -5,6 +5,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run src/__tests__/e2e",
+    "test:all": "vitest run",
     "dev": "nodemon src/app.js",
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",

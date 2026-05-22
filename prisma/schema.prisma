@@ -42,6 +42,7 @@ model Turma {
   nucleo      Nucleo?          @relation(fields: [nucleo_id], references: [id])
   professores ProfessorTurma[]
   alunos      Aluno[]
+  presencas   Presenca[]
 
   @@map("turmas")
 }
@@ -67,21 +68,39 @@ model Escola {
 }
 
 model Aluno {
-  id        Int     @id @default(autoincrement())
-  nome      String  @db.VarChar(150)
-  matricula String  @db.VarChar(100)
-  nucleo_id Int?
-  idade     Int?    @db.UnsignedTinyInt
-  ativo     Boolean @default(true)
-  dia_aula  String? @db.VarChar(50)
-  bairro    String  @db.VarChar(150)
-  turma_id  Int?
-  escola_id Int?
-  turma     Turma?  @relation(fields: [turma_id], references: [id], onDelete: SetNull)
-  nucleo    Nucleo? @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
-  escola    Escola? @relation(fields: [escola_id], references: [id], onDelete: SetNull)
+  id                Int         @id @default(autoincrement())
+  nome              String      @db.VarChar(150)
+  matricula         String      @unique @db.VarChar(100)
+  nucleo_id         Int?
+  idade             Int?        @db.UnsignedTinyInt
+  ativo             Boolean     @default(true)
+  dia_aula          String?     @db.VarChar(50)
+  bairro            String      @db.VarChar(150)
+  turma_id          Int?
+  escola_id         Int?
+  telefone_aluna    String?     @db.VarChar(20)
+  nome_responsavel  String?     @db.VarChar(150)
+  telefone_responsavel String?  @db.VarChar(20)
+  turma             Turma?      @relation(fields: [turma_id], references: [id], onDelete: SetNull)
+  nucleo            Nucleo?     @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
+  escola            Escola?     @relation(fields: [escola_id], references: [id], onDelete: SetNull)
+  presencas         Presenca[]
 
   @@map("alunos")
+}
+
+model Presenca {
+  id           Int      @id @default(autoincrement())
+  aluno_id     Int
+  turma_id     Int
+  professor_id Int
+  data_aula    DateTime @db.Date
+  presente     Boolean  @default(true)
+  aluno        Aluno    @relation(fields: [aluno_id], references: [id], onDelete: Cascade)
+  turma        Turma    @relation(fields: [turma_id], references: [id], onDelete: Cascade)
+
+  @@unique([aluno_id, data_aula])
+  @@map("presencas")
 }
 
 model Invite {
