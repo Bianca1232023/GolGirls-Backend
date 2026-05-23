@@ -1,15 +1,70 @@
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import * as alunoRepo from '../repositories/alunoRepository.js';
 import * as presencaRepo from '../repositories/presencaRepository.js';
+import { sendAlunoSetupEmail, sendAlunoPasswordResetEmail } from '../utils/email.js';
 
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 12;
 
 export async function register(data) {
-  return alunoRepo.create(data);
+  const emailTaken = data.email ? await alunoRepo.emailTaken(data.email) : null;
+  if (emailTaken) {
+    const err = new Error('E-mail já cadastrado para outra aluna');
+    err.status = 409;
+    throw err;
+  }
+
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  const aluno = await alunoRepo.create({
+    ...data,
+    reset_token: token,
+    reset_token_expires: expires,
+    senha_ativa: false,
+  });
+
+  if (data.email) {
+    await sendAlunoSetupEmail(data.email, token, data.nome);
+  }
+
+  return aluno;
 }
 
-export async function login(matricula) {
-  return alunoRepo.findByMatricula(matricula);
+export async function login(matricula, password) {
+  const row = await alunoRepo.findByMatriculaWithPassword(matricula);
+  if (!row) return null;
+  if (!row.senha_ativa || !row.password) {
+    return { error: 'Acesso ainda não ativado. Verifique seu e-mail para definir a senha.' };
+  }
+  const ok = await bcrypt.compare(password, row.password);
+  if (!ok) return null;
+  return { id: row.id, nome: row.nome, matricula: row.matricula };
+}
+
+export async function findByResetToken(token) {
+  return alunoRepo.findByResetToken(token);
+}
+
+export async function activatePassword(id, password) {
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  return alunoRepo.activatePassword(id, passwordHash);
+}
+
+export async function requestPasswordReset(email) {
+  const aluno = await alunoRepo.findByEmail(email);
+  if (!aluno || !aluno.senha_ativa) return null;
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000);
+  await alunoRepo.setResetToken(aluno.id, token, expires);
+  return token;
+}
+
+export async function resetPassword(token, password) {
+  const aluno = await alunoRepo.findByResetToken(token);
+  if (!aluno) return false;
+  await activatePassword(aluno.id, password);
+  return true;
 }
 
 export async function getByTurma(turmaId) {

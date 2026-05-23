@@ -77,6 +77,7 @@ async function main() {
     {
       matricula: '2026001',
       nome: 'Julia Santos',
+      email: 'julia.santos@gogirls.local',
       idade: 12,
       bairro: 'Centro',
       dia_aula: 'Terça e Quinta',
@@ -87,6 +88,7 @@ async function main() {
     {
       matricula: '2026002',
       nome: 'Beatriz Oliveira',
+      email: 'beatriz.oliveira@gogirls.local',
       idade: 13,
       bairro: 'Copacabana',
       dia_aula: 'Terça e Quinta',
@@ -97,6 +99,7 @@ async function main() {
     {
       matricula: '2026003',
       nome: 'Larissa Costa',
+      email: 'larissa.costa@gogirls.local',
       idade: 11,
       bairro: 'Tijuca',
       dia_aula: 'Terça e Quinta',
@@ -110,6 +113,8 @@ async function main() {
   for (const a of alunosData) {
     const payload = {
       ...a,
+      password: passwordHash,
+      senha_ativa: true,
       turma_id: turma.id,
       nucleo_id: nucleo.id,
       escola_id: escola.id,
@@ -152,7 +157,8 @@ async function main() {
   console.log('\n--- Professor ---');
   console.log('E-mail:', professor.email);
   console.log('Turma:', turma.nome, `(id ${turma.id})`);
-  console.log('\n--- Alunas (login só com matrícula) ---');
+  console.log('\n--- Alunas (matrícula + senha) ---');
+  console.log('Senha alunas:', SENHA);
   for (const a of alunos) {
     console.log(`  ${a.matricula} — ${a.nome}`);
   }

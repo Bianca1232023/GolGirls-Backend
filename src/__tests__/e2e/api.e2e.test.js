@@ -60,8 +60,11 @@ describe('E2E — rotas públicas', () => {
     expect(res.status).toBe(404);
   });
 
-  it('POST /aluno/login com matrícula inválida retorna 401', async () => {
-    const res = await client.post('/aluno/login', { matricula: 'matricula-inexistente-e2e-000' });
+  it('POST /aluno/login com credenciais inválidas retorna 401', async () => {
+    const res = await client.post('/aluno/login', {
+      matricula: 'matricula-inexistente-e2e-000',
+      password: 'SenhaInvalida123',
+    });
     expect(res.status).toBe(401);
   });
 

@@ -44,8 +44,39 @@ export async function sendAdminSetupEmail(to, token) {
   });
 }
 
+export async function sendAlunoSetupEmail(to, token, nome) {
+  const link = `${process.env.APP_URL}/aluno/definir-senha?token=${token}`;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'GolGirls – Defina sua senha de acesso',
+    html: `
+      <p>Olá, ${nome}!</p>
+      <p>Você foi cadastrada na plataforma <strong>GoLGirls</strong>.</p>
+      <p>Clique no link abaixo para criar sua senha de acesso:</p>
+      <p><a href="${link}">${link}</a></p>
+      <p>Este link expira em <strong>24 horas</strong>.</p>
+    `,
+  });
+}
+
+export async function sendAlunoPasswordResetEmail(to, token) {
+  const link = `${process.env.APP_URL}/aluno/redefinir-senha?token=${token}`;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'GolGirls – Redefinição de senha (Aluna)',
+    html: `
+      <p>Olá!</p>
+      <p>Recebemos uma solicitação para redefinir a senha da sua conta de aluna na <strong>GoLGirls</strong>.</p>
+      <p><a href="${link}">${link}</a></p>
+      <p>Este link expira em <strong>1 hora</strong>.</p>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail(to, token, role) {
-  const path = role === 'admin' ? 'admin' : 'professor';
+  const path = role === 'admin' ? 'admin' : role === 'aluno' ? 'aluno' : 'professor';
   const link = `${process.env.APP_URL}/${path}/redefinir-senha?token=${token}`;
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,

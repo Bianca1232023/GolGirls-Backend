@@ -9,6 +9,11 @@ export async function create(data) {
     data: {
       nome: data.nome,
       matricula: data.matricula,
+      email: data.email ?? null,
+      password: data.password ?? null,
+      reset_token: data.reset_token ?? null,
+      reset_token_expires: data.reset_token_expires ?? null,
+      senha_ativa: data.senha_ativa ?? false,
       nucleo_id: data.nucleo_id,
       idade: data.idade ?? null,
       ativo: data.ativo ?? true,
@@ -23,6 +28,48 @@ export async function create(data) {
   });
 }
 
+export async function emailTaken(email) {
+  if (!email) return null;
+  return prisma.aluno.findUnique({ where: { email }, select: { id: true } });
+}
+
+export async function findByEmail(email) {
+  return prisma.aluno.findUnique({ where: { email }, select: { id: true, senha_ativa: true } });
+}
+
+export async function findByMatriculaWithPassword(matricula) {
+  return prisma.aluno.findFirst({
+    where: { matricula },
+    select: { id: true, nome: true, matricula: true, password: true, senha_ativa: true },
+  });
+}
+
+export async function findByResetToken(token) {
+  return prisma.aluno.findFirst({
+    where: { reset_token: token, reset_token_expires: { gt: new Date() } },
+    select: { id: true, email: true, nome: true },
+  });
+}
+
+export async function activatePassword(id, passwordHash) {
+  await prisma.aluno.update({
+    where: { id },
+    data: {
+      password: passwordHash,
+      senha_ativa: true,
+      reset_token: null,
+      reset_token_expires: null,
+    },
+  });
+}
+
+export async function setResetToken(id, token, expires) {
+  await prisma.aluno.update({
+    where: { id },
+    data: { reset_token: token, reset_token_expires: expires },
+  });
+}
+
 export async function findById(id) {
   const a = await prisma.aluno.findUnique({
     where: { id },
@@ -32,10 +79,7 @@ export async function findById(id) {
 }
 
 export async function findByMatricula(matricula) {
-  return prisma.aluno.findFirst({
-    where: { matricula },
-    select: { id: true, nome: true, matricula: true },
-  });
+  return findByMatriculaWithPassword(matricula);
 }
 
 function formatAluno(a) {

@@ -1,8 +1,9 @@
 import * as alunoService from '../services/alunoService.js';
 import * as turmaService from '../services/turmaService.js';
-import { assertNonEmptyString } from '../utils/validation.js';
+import { assertEmail, assertNonEmptyString, assertPassword } from '../utils/validation.js';
 import { issueToken } from '../utils/jwtTokens.js';
 import { refreshAccessToken } from '../utils/jwtTokens.js';
+import { sendAlunoPasswordResetEmail } from '../utils/email.js';
 
 export async function create(req, res) {
   if (req.user?.role !== 'professor') {
@@ -21,6 +22,7 @@ export async function create(req, res) {
 
   const nome = assertNonEmptyString(req.body?.nome, 'nome');
   const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
+  const email = assertEmail(req.body?.email);
   const nucleo_id = Number(req.body?.nucleo_id);
   const escola_id = Number(req.body?.escola_id);
   const bairro = assertNonEmptyString(req.body?.bairro, 'bairro');
@@ -36,6 +38,7 @@ export async function create(req, res) {
   await alunoService.register({
     nome,
     matricula,
+    email,
     nucleo_id,
     bairro,
     escola_id,
@@ -45,7 +48,37 @@ export async function create(req, res) {
     nome_responsavel: req.body?.nome_responsavel?.trim() || null,
     telefone_responsavel: req.body?.telefone_responsavel?.trim() || null,
   });
-  res.status(201).json({ status: 201, message: 'Cadastro do aluno registrado com sucesso' });
+  res.status(201).json({ status: 201, message: 'Cadastro registrado. E-mail enviado para a aluna definir a senha.' });
+}
+
+export async function setPassword(req, res) {
+  const token = assertNonEmptyString(req.body?.token, 'token');
+  const password = assertPassword(req.body?.password);
+  const aluno = await alunoService.findByResetToken(token);
+  if (!aluno) {
+    return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+  }
+  await alunoService.activatePassword(aluno.id, password);
+  res.json({ status: 200, message: 'Senha definida com sucesso. Você já pode fazer login.' });
+}
+
+export async function forgotPassword(req, res) {
+  const email = assertEmail(req.body?.email);
+  const token = await alunoService.requestPasswordReset(email);
+  if (token) {
+    await sendAlunoPasswordResetEmail(email, token);
+  }
+  res.json({ status: 200, message: 'Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.' });
+}
+
+export async function resetPassword(req, res) {
+  const token = assertNonEmptyString(req.body?.token, 'token');
+  const password = assertPassword(req.body?.password);
+  const ok = await alunoService.resetPassword(token, password);
+  if (!ok) {
+    return res.status(400).json({ status: 400, message: 'Token inválido ou expirado' });
+  }
+  res.json({ status: 200, message: 'Senha redefinida com sucesso. Você já pode fazer login.' });
 }
 
 export async function updateTurma(req, res) {
@@ -71,12 +104,16 @@ export async function updateTurma(req, res) {
 
 export async function login(req, res) {
   const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
-  const aluno = await alunoService.login(matricula);
-  if (!aluno) {
-    return res.status(401).json({ status: 401, message: 'Matrícula inválida' });
+  const password = assertNonEmptyString(req.body?.password, 'password');
+  const result = await alunoService.login(matricula, password);
+  if (!result) {
+    return res.status(401).json({ status: 401, message: 'Matrícula ou senha inválida' });
   }
-  const token = issueToken({ id: aluno.id, role: 'aluno' });
-  res.json({ status: 200, token, aluno: { id: aluno.id, nome: aluno.nome, matricula: aluno.matricula } });
+  if (result.error) {
+    return res.status(403).json({ status: 403, message: result.error });
+  }
+  const token = issueToken({ id: result.id, role: 'aluno' });
+  res.json({ status: 200, token, aluno: { id: result.id, nome: result.nome, matricula: result.matricula } });
 }
 
 export async function me(req, res) {

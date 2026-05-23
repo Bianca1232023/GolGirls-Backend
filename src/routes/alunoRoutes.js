@@ -18,6 +18,9 @@ function asyncHandler(fn) {
 }
 
 router.post('/login', authLimiter, asyncHandler(ctrl.login));
+router.post('/set-password', authLimiter, asyncHandler(ctrl.setPassword));
+router.post('/forgot-password', authLimiter, asyncHandler(ctrl.forgotPassword));
+router.post('/reset-password', authLimiter, asyncHandler(ctrl.resetPassword));
 router.post('/refresh', asyncHandler(ctrl.refresh));
 router.get('/me', authenticateToken, asyncHandler(ctrl.me));
 router.get('/jornada', authenticateToken, asyncHandler(ctrl.jornada));

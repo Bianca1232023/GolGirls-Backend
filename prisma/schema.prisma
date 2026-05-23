@@ -38,8 +38,8 @@ model Turma {
   escola_id   Int?
   nucleo_id   Int?
   capacidade  Int?             @db.UnsignedTinyInt
-  escola      Escola?          @relation(fields: [escola_id], references: [id])
-  nucleo      Nucleo?          @relation(fields: [nucleo_id], references: [id])
+  escola      Escola?          @relation(fields: [escola_id], references: [id], onDelete: SetNull)
+  nucleo      Nucleo?          @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
   professores ProfessorTurma[]
   alunos      Aluno[]
   presencas   Presenca[]
@@ -68,19 +68,24 @@ model Escola {
 }
 
 model Aluno {
-  id                Int         @id @default(autoincrement())
-  nome              String      @db.VarChar(150)
-  matricula         String      @unique @db.VarChar(100)
-  nucleo_id         Int?
-  idade             Int?        @db.UnsignedTinyInt
-  ativo             Boolean     @default(true)
-  dia_aula          String?     @db.VarChar(50)
-  bairro            String      @db.VarChar(150)
-  turma_id          Int?
-  escola_id         Int?
-  telefone_aluna    String?     @db.VarChar(20)
-  nome_responsavel  String?     @db.VarChar(150)
-  telefone_responsavel String?  @db.VarChar(20)
+  id                   Int         @id @default(autoincrement())
+  nome                 String      @db.VarChar(150)
+  matricula            String      @unique @db.VarChar(100)
+  email                String?     @unique @db.VarChar(255)
+  password             String?     @db.VarChar(255)
+  reset_token          String?     @db.VarChar(255)
+  reset_token_expires  DateTime?
+  senha_ativa          Boolean     @default(false)
+  nucleo_id            Int?
+  idade                Int?        @db.UnsignedTinyInt
+  ativo                Boolean     @default(true)
+  dia_aula             String?     @db.VarChar(50)
+  bairro               String      @db.VarChar(150)
+  turma_id             Int?
+  escola_id            Int?
+  telefone_aluna       String?     @db.VarChar(20)
+  nome_responsavel     String?     @db.VarChar(150)
+  telefone_responsavel String?     @db.VarChar(20)
   turma             Turma?      @relation(fields: [turma_id], references: [id], onDelete: SetNull)
   nucleo            Nucleo?     @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
   escola            Escola?     @relation(fields: [escola_id], references: [id], onDelete: SetNull)

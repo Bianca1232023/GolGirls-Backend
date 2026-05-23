@@ -1,4 +1,5 @@
 import * as turmaRepo from '../repositories/turmaRepository.js';
+import prisma from '../models/prisma.js';
 
 export async function create({ nome, escola_id, nucleo_id, capacidade }) {
   return turmaRepo.create({ nome, escola_id, nucleo_id, capacidade });
@@ -29,5 +30,7 @@ export async function getAll() {
 }
 
 export async function remove(id) {
-  return turmaRepo.remove(id);
+  const numId = Number(id);
+  await prisma.aluno.updateMany({ where: { turma_id: numId }, data: { turma_id: null } });
+  return turmaRepo.remove(numId);
 }
