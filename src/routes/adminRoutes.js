@@ -26,6 +26,8 @@ adminAuthRouter.post('/login', authLimiter, asyncHandler(ctrl.login));
 
 // /admins/* — CRUD routes
 export const adminCrudRouter = Router();
+adminCrudRouter.get('/me', authenticateToken, asyncHandler(ctrl.getMe));
+adminCrudRouter.patch('/me', authenticateToken, asyncHandler(ctrl.updateMe));
 adminCrudRouter.get('/', authenticateToken, asyncHandler(ctrl.getAll));
 adminCrudRouter.put('/:id', authenticateToken, asyncHandler(ctrl.update));
 adminCrudRouter.patch('/:id', authenticateToken, asyncHandler(ctrl.updatePartial));

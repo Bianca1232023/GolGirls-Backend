@@ -18,6 +18,13 @@ function asyncHandler(fn) {
 }
 
 router.post('/login', authLimiter, asyncHandler(ctrl.login));
+router.post('/set-password', asyncHandler(ctrl.setPassword));
+router.post('/forgot-password', authLimiter, asyncHandler(ctrl.forgotPassword));
+router.post('/reset-password', asyncHandler(ctrl.resetPassword));
+router.get('/me', authenticateToken, asyncHandler(ctrl.getMe));
+router.patch('/me', authenticateToken, asyncHandler(ctrl.updateMe));
+router.post('/', authenticateToken, asyncHandler(ctrl.create));
+router.delete('/:id', authenticateToken, asyncHandler(ctrl.remove));
 router.get('/', authenticateToken, asyncHandler(ctrl.listAlunos));
 
 export default router;

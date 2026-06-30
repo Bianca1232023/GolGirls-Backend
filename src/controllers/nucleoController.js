@@ -20,6 +20,6 @@ export async function remove(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  await nucleoService.remove(req.params.id);
+  await nucleoService.remove(Number(req.params.id));
   res.json({ status: 200, message: 'Núcleo removido com sucesso' });
 }

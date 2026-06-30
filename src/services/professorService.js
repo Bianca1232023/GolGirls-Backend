@@ -59,12 +59,19 @@ export async function emailTaken(email) {
   return professorRepo.emailTaken(email);
 }
 
-export async function getAll(id) {
-  return professorRepo.findAll(id);
-}
-
 export async function getById(id) {
   return professorRepo.findById(id);
+}
+
+export async function updateSelf(id, { name, email }) {
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (email !== undefined) data.email = email;
+  return professorRepo.updateById(id, data);
+}
+
+export async function getAll(id) {
+  return professorRepo.findAll(id);
 }
 
 export async function remove(id) {

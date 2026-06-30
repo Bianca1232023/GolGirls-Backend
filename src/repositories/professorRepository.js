@@ -99,6 +99,10 @@ export async function findAllWithStatus() {
   return rows.map((r) => ({ ...r, name: r.name ?? r.email, role: 'professor' }));
 }
 
+export async function updateById(id, data) {
+  return prisma.professor.update({ where: { id }, data });
+}
+
 export async function remove(id) {
   return prisma.professor.delete({ where: { id } });
 }

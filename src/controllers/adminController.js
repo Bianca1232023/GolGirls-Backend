@@ -131,3 +131,21 @@ export async function remove(req, res) {
   await adminService.remove(id);
   res.json({ status: 200, message: 'Admin removido com sucesso' });
 }
+
+export async function getMe(req, res) {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+  }
+  const [admin] = await adminService.getAll(req.user.id);
+  if (!admin) return res.status(404).json({ status: 404, message: 'Perfil não encontrado' });
+  res.json({ status: 200, admin });
+}
+
+export async function updateMe(req, res) {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
+  }
+  const result = await adminService.updatePartial(req.user.id, req.body);
+  if (result?.error) return res.status(400).json({ status: 400, message: result.error });
+  res.json({ status: 200, message: 'Perfil atualizado com sucesso' });
+}

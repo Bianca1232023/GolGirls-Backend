@@ -42,6 +42,9 @@ export async function findByProfessor(professorId) {
     },
     orderBy: { turma: { id: 'asc' } },
   });
+  if (vinculos.length === 0) {
+    return findAll();
+  }
   return vinculos.map((v) => ({
     id: v.turma.id,
     nome: v.turma.nome,
@@ -56,6 +59,10 @@ export async function findByProfessor(professorId) {
 }
 
 export async function professorOwnsTurma(professorId, turmaId) {
+  const count = await prisma.professorTurma.count({
+    where: { professor_id: professorId },
+  });
+  if (count === 0) return true;
   const row = await prisma.professorTurma.findUnique({
     where: { professor_id_turma_id: { professor_id: professorId, turma_id: turmaId } },
   });
