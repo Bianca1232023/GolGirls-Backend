@@ -9,6 +9,9 @@ export async function create(data) {
     data: {
       nome: data.nome,
       matricula: data.matricula,
+      email: data.email ?? null,
+      set_password_token: data.set_password_token ?? null,
+      set_password_token_expires: data.set_password_token_expires ?? null,
       nucleo_id: data.nucleo_id,
       idade: data.idade ?? null,
       ativo: data.ativo ?? true,
@@ -23,7 +26,6 @@ export async function create(data) {
 export async function findByMatricula(matricula) {
   return prisma.aluno.findFirst({
     where: { matricula },
-    select: { id: true, nome: true, matricula: true },
   });
 }
 
@@ -80,5 +82,30 @@ export async function findWithFilters(professorId, filters = {}) {
 
 export async function updateTurma(alunoId, turmaId) {
   return prisma.aluno.update({ where: { id: alunoId }, data: { turma_id: turmaId } });
+}
+
+export async function findById(id) {
+  const a = await prisma.aluno.findUnique({ where: { id }, include: alunoInclude });
+  return a ? formatAluno(a) : null;
+}
+
+export async function updateById(id, data) {
+  return prisma.aluno.update({ where: { id }, data });
+}
+
+export async function findByEmail(email) {
+  return prisma.aluno.findUnique({ where: { email } });
+}
+
+export async function findBySetPasswordToken(token) {
+  return prisma.aluno.findFirst({ where: { set_password_token: token } });
+}
+
+export async function findByResetToken(token) {
+  return prisma.aluno.findFirst({ where: { reset_token: token } });
+}
+
+export async function remove(id) {
+  return prisma.aluno.delete({ where: { id } });
 }
 

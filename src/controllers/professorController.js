@@ -76,3 +76,33 @@ export async function remove(req, res) {
   await professorService.remove(req.params.id);
   res.json({ status: 200, message: 'Professor removido com sucesso' });
 }
+
+export async function getMe(req, res) {
+  if (req.user?.role !== 'professor') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+  }
+  const prof = await professorService.getById(req.user.id);
+  if (!prof) return res.status(404).json({ status: 404, message: 'Perfil não encontrado' });
+  res.json({ status: 200, professor: prof });
+}
+
+export async function updateMe(req, res) {
+  if (req.user?.role !== 'professor') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
+  }
+  const data = {};
+  if (req.body?.name) data.name = assertNonEmptyString(req.body.name, 'name');
+  if (req.body?.email) data.email = assertEmail(req.body.email);
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ status: 400, message: 'Nenhum campo válido para atualizar' });
+  }
+  if (data.email) {
+    const current = await professorService.getById(req.user.id);
+    if (data.email !== current?.email) {
+      const taken = await professorService.emailTaken(data.email);
+      if (taken) return res.status(409).json({ status: 409, message: 'E-mail já em uso por outra conta' });
+    }
+  }
+  await professorService.updateSelf(req.user.id, data);
+  res.json({ status: 200, message: 'Perfil atualizado com sucesso' });
+}

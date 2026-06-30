@@ -20,6 +20,6 @@ export async function remove(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  await escolaService.remove(req.params.id);
+  await escolaService.remove(Number(req.params.id));
   res.json({ status: 200, message: 'Escola removida com sucesso' });
 }

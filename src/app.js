@@ -14,6 +14,8 @@ import turmaRoutes from './routes/turmaRoutes.js';
 import nucleoRoutes from './routes/nucleoRoutes.js';
 import escolaRoutes from './routes/escolaRoutes.js';
 import adminExtrasRoutes from './routes/adminExtrasRoutes.js';
+import chamadaRoutes from './routes/chamadaRoutes.js';
+import muralRoutes from './routes/muralRoutes.js';
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use('/admin/nucleos', nucleoRoutes);
 app.use('/nucleos', nucleoRoutes);
 app.use('/admin/escolas', escolaRoutes);
 app.use('/escolas', escolaRoutes);
+app.use('/chamada', chamadaRoutes);
+app.use('/mural', muralRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ status: 404, message: 'Rota não encontrada' });

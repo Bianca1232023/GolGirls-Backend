@@ -29,6 +29,7 @@ export async function create(req, res) {
   const nucleo_id = Number(req.body?.nucleo_id);
   const escola_id = Number(req.body?.escola_id);
   const bairro = assertNonEmptyString(req.body?.bairro, 'bairro');
+  const email = req.body?.email?.trim() || null;
 
   if (!nucleo_id || isNaN(nucleo_id)) {
     return res.status(400).json({ status: 400, message: 'nucleo_id é obrigatório' });
@@ -37,8 +38,49 @@ export async function create(req, res) {
     return res.status(400).json({ status: 400, message: 'escola_id é obrigatório' });
   }
 
-  await alunoService.register({ nome, matricula, nucleo_id, bairro, escola_id, turma_id });
-  res.status(201).json({ status: 201, message: 'Cadastro do aluno registrado com sucesso' });
+  await alunoService.register({ nome, matricula, email, nucleo_id, bairro, escola_id, turma_id });
+  const msg = email
+    ? 'Aluna cadastrada! Um e-mail com o link para definir a senha foi enviado.'
+    : 'Cadastro do aluno registrado com sucesso';
+  res.status(201).json({ status: 201, message: msg });
+}
+
+export async function setPassword(req, res) {
+  const token = req.body?.token;
+  const password = req.body?.password;
+  if (!token || !password) {
+    return res.status(400).json({ status: 400, message: 'token e password são obrigatórios' });
+  }
+  const result = await alunoService.setPassword(token, password);
+  if (result.error) return res.status(400).json({ status: 400, message: result.error });
+  res.json({ status: 200, message: 'Senha definida com sucesso' });
+}
+
+export async function forgotPassword(req, res) {
+  const email = req.body?.email?.trim();
+  if (!email) return res.status(400).json({ status: 400, message: 'E-mail é obrigatório' });
+  await alunoService.forgotPassword(email);
+  res.json({ status: 200, message: 'Se o e-mail existir, um link será enviado.' });
+}
+
+export async function resetPassword(req, res) {
+  const { token, password } = req.body ?? {};
+  if (!token || !password) {
+    return res.status(400).json({ status: 400, message: 'token e password são obrigatórios' });
+  }
+  const result = await alunoService.resetPassword(token, password);
+  if (result.error) return res.status(400).json({ status: 400, message: result.error });
+  res.json({ status: 200, message: 'Senha redefinida com sucesso' });
+}
+
+export async function remove(req, res) {
+  if (req.user?.role !== 'professor' && req.user?.role !== 'admin') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito' });
+  }
+  const id = Number(req.params.id);
+  if (!id || isNaN(id)) return res.status(400).json({ status: 400, message: 'ID inválido' });
+  await alunoService.remove(id);
+  res.json({ status: 200, message: 'Aluna removida com sucesso' });
 }
 
 export async function updateTurma(req, res) {
@@ -63,10 +105,11 @@ export async function updateTurma(req, res) {
 }
 
 export async function login(req, res) {
-  const matricula = assertNonEmptyString(req.body?.matricula, 'matricula');
-  const aluno = await alunoService.login(matricula);
+  const value = assertNonEmptyString(req.body?.matricula, 'matricula');
+  const password = req.body?.password;
+  const aluno = await alunoService.login(value, password);
   if (!aluno) {
-    return res.status(401).json({ status: 401, message: 'Matrícula inválida' });
+    return res.status(401).json({ status: 401, message: 'Credenciais inválidas' });
   }
   const token = signToken(aluno);
   res.json({ status: 200, token });
@@ -85,4 +128,27 @@ export async function listAlunos(req, res) {
 
   const rows = await alunoService.getAll();
   res.json({ status: 200, alunos: rows });
+}
+
+export async function getMe(req, res) {
+  if (req.user?.role !== 'aluno') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a alunos' });
+  }
+  const aluno = await alunoService.getById(req.user.id);
+  if (!aluno) return res.status(404).json({ status: 404, message: 'Perfil não encontrado' });
+  res.json({ status: 200, aluno });
+}
+
+export async function updateMe(req, res) {
+  if (req.user?.role !== 'aluno') {
+    return res.status(403).json({ status: 403, message: 'Acesso restrito a alunos' });
+  }
+  const data = {};
+  if (req.body?.nome) data.nome = assertNonEmptyString(req.body.nome, 'nome');
+  if (req.body?.bairro) data.bairro = assertNonEmptyString(req.body.bairro, 'bairro');
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ status: 400, message: 'Nenhum campo válido para atualizar' });
+  }
+  await alunoService.updateSelf(req.user.id, data);
+  res.json({ status: 200, message: 'Perfil atualizado com sucesso' });
 }

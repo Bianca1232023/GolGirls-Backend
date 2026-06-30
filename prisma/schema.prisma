@@ -38,8 +38,8 @@ model Turma {
   escola_id   Int?
   nucleo_id   Int?
   capacidade  Int?             @db.UnsignedTinyInt
-  escola      Escola?          @relation(fields: [escola_id], references: [id])
-  nucleo      Nucleo?          @relation(fields: [nucleo_id], references: [id])
+  escola      Escola?          @relation(fields: [escola_id], references: [id], onDelete: SetNull)
+  nucleo      Nucleo?          @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
   professores ProfessorTurma[]
   alunos      Aluno[]
 
@@ -67,19 +67,25 @@ model Escola {
 }
 
 model Aluno {
-  id        Int     @id @default(autoincrement())
-  nome      String  @db.VarChar(150)
-  matricula String  @db.VarChar(100)
-  nucleo_id Int?
-  idade     Int?    @db.UnsignedTinyInt
-  ativo     Boolean @default(true)
-  dia_aula  String? @db.VarChar(50)
-  bairro    String  @db.VarChar(150)
-  turma_id  Int?
-  escola_id Int?
-  turma     Turma?  @relation(fields: [turma_id], references: [id], onDelete: SetNull)
-  nucleo    Nucleo? @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
-  escola    Escola? @relation(fields: [escola_id], references: [id], onDelete: SetNull)
+  id                         Int       @id @default(autoincrement())
+  nome                       String    @db.VarChar(150)
+  matricula                  String    @db.VarChar(100)
+  email                      String?   @unique @db.VarChar(255)
+  password                   String?   @db.VarChar(255)
+  set_password_token         String?   @db.VarChar(255)
+  set_password_token_expires DateTime?
+  reset_token                String?   @db.VarChar(255)
+  reset_token_expires        DateTime?
+  nucleo_id                  Int?
+  idade                      Int?      @db.UnsignedTinyInt
+  ativo                      Boolean   @default(true)
+  dia_aula                   String?   @db.VarChar(50)
+  bairro                     String    @db.VarChar(150)
+  turma_id                   Int?
+  escola_id                  Int?
+  turma                      Turma?    @relation(fields: [turma_id], references: [id], onDelete: SetNull)
+  nucleo                     Nucleo?   @relation(fields: [nucleo_id], references: [id], onDelete: SetNull)
+  escola                     Escola?   @relation(fields: [escola_id], references: [id], onDelete: SetNull)
 
   @@map("alunos")
 }
@@ -103,7 +109,51 @@ model ProfessorTurma {
   @@map("professor_turmas")
 }
 
+model Chamada {
+  id        Int       @id @default(autoincrement())
+  turma_id  Int
+  data      DateTime  @default(now())
+  registros Registro[]
+  
+  @@map("chamadas")
+}
+
+model Registro {
+  id        Int       @id @default(autoincrement())
+  chamada_id Int
+  aluno_id  Int
+  presente  Boolean   @default(false)
+  chamada   Chamada   @relation(fields: [chamada_id], references: [id], onDelete: Cascade)
+  
+  @@map("registros")
+}
+
 enum Role {
   professor
   admin
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  author_id   Int
+  author_role Role
+  text        String    @db.Text
+  image_url   String?   @db.VarChar(500)
+  likes       Int       @default(0)
+  created_at  DateTime  @default(now())
+  comments    Comment[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id          Int      @id @default(autoincrement())
+  post_id     Int
+  author_id   Int
+  author_role Role
+  text        String   @db.Text
+  created_at  DateTime @default(now())
+  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@map("comments")
 }
