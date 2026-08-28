@@ -36,3 +36,11 @@ export async function addComment(postId, authorId, authorRole, text) {
     },
   });
 }
+
+export async function deletePost(postId) {
+  return prisma.post.delete({ where: { id: postId } });
+}
+
+export async function findPost(postId) {
+  return prisma.post.findUnique({ where: { id: postId } });
+}
