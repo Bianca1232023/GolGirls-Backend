@@ -35,3 +35,20 @@ export async function addComment(req, res) {
   const comment = await repo.addComment(postId, req.user.id, req.user.role, text);
   res.status(201).json({ status: 201, comment });
 }
+
+export async function deletePost(req, res) {
+  const postId = Number(req.params.id);
+  if (!postId) return res.status(400).json({ status: 400, message: 'id inválido' });
+
+  const post = await repo.findPost(postId);
+  if (!post) return res.status(404).json({ status: 404, message: 'Publicação não encontrada' });
+
+  const isAuthor = post.author_id === req.user.id;
+  const isAdmin = req.user.role === 'admin';
+  if (!isAuthor && !isAdmin) {
+    return res.status(403).json({ status: 403, message: 'Sem permissão para excluir esta publicação' });
+  }
+
+  await repo.deletePost(postId);
+  res.json({ status: 200, message: 'Publicação excluída com sucesso' });
+}

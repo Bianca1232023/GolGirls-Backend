@@ -12,5 +12,6 @@ router.get('/', authenticateToken, asyncHandler(ctrl.listPosts));
 router.post('/', authenticateToken, asyncHandler(ctrl.createPost));
 router.patch('/:id/like', authenticateToken, asyncHandler(ctrl.toggleLike));
 router.post('/:id/comment', authenticateToken, asyncHandler(ctrl.addComment));
+router.delete('/:id', authenticateToken, asyncHandler(ctrl.deletePost));
 
 export default router;

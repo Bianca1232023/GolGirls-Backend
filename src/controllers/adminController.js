@@ -103,7 +103,7 @@ export async function update(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const name = assertNonEmptyString(req.body?.name, 'name');
   const email = assertEmail(req.body?.email);
   const password = assertPassword(req.body?.password);
@@ -115,7 +115,7 @@ export async function updatePartial(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const result = await adminService.updatePartial(id, req.body);
   if (result?.error) {
     return res.status(400).json({ status: 400, message: result.error });
@@ -127,7 +127,7 @@ export async function remove(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  const { id } = req.params;
+  const id = Number(req.params.id);
   await adminService.remove(id);
   res.json({ status: 200, message: 'Admin removido com sucesso' });
 }
