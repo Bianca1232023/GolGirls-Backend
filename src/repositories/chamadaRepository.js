@@ -62,65 +62,80 @@ export async function getChamadasByTurma(turmaId) {
   });
 }
 
-export async function getRelatorioByProfessor(professorId) {
-  // 1. Busca turmas do professor com seus alunos
-  const professorTurmas = await prisma.professorTurma.findMany({
-    where: { professor_id: professorId },
+// NOVA FUNÇÃO: Filtrando o relatório apenas pela turma selecionada
+export async function getRelatorioCompletoDaTurma(idDaTurma) {
+  // 1. Pega os dados da turma e os alunos que estão nela
+  const turma = await prisma.turma.findUnique({
+    where: { id: idDaTurma },
     include: {
-      turma: {
-        select: {
-          id: true,
-          nome: true,
-          alunos: { select: { id: true, nome: true, matricula: true } },
-        },
-      },
-    },
-  });
-
-  if (!professorTurmas.length) return [];
-
-  // 2. Monta mapa de todos os alunos das turmas (base para o relatório)
-  const alunoMap = new Map();
-  for (const pt of professorTurmas) {
-    for (const aluno of pt.turma.alunos) {
-      if (!alunoMap.has(aluno.id)) {
-        alunoMap.set(aluno.id, {
-          aluno_id: aluno.id,
-          nome: aluno.nome,
-          matricula: aluno.matricula,
-          turma_nome: pt.turma.nome,
-          total_aulas: 0,
-          presentes: 0,
-          faltas: 0,
-        });
+      alunos: {
+        select: { id: true, nome: true, matricula: true }
       }
     }
+  });
+
+  if (!turma) {
+    return [];
   }
 
-  // 3. Busca chamadas com registros para acumular presença/falta
-  const turmaIds = professorTurmas.map((pt) => pt.turma_id);
-  const chamadas = await prisma.chamada.findMany({
-    where: { turma_id: { in: turmaIds } },
+  // 2. Pega todas as chamadas dessa turma específica
+  const chamadasDaTurma = await prisma.chamada.findMany({
+    where: { turma_id: idDaTurma },
     include: { registros: true },
   });
 
-  for (const chamada of chamadas) {
-    for (const r of chamada.registros) {
-      // Ignora registros órfãos (aluno deletado)
-      if (!alunoMap.has(r.aluno_id)) continue;
-      const entry = alunoMap.get(r.aluno_id);
-      entry.total_aulas += 1;
-      if (r.presente) entry.presentes += 1;
-      else entry.faltas += 1;
+  let relatorioFinal = [];
+  let totalDeAulas = chamadasDaTurma.length;
+
+  // 3. Monta os dados de presenca aluno por aluno usando um laco de repeticao simples
+  for (let i = 0; i < turma.alunos.length; i++) {
+    let alunoAtual = turma.alunos[i];
+    
+    let totalPresente = 0;
+    let totalFalta = 0;
+
+    // Procura o aluno em cada chamada feita
+    for (let j = 0; j < chamadasDaTurma.length; j++) {
+      let chamada = chamadasDaTurma[j];
+      
+      for (let k = 0; k < chamada.registros.length; k++) {
+        let registro = chamada.registros[k];
+        
+        if (registro.aluno_id === alunoAtual.id) {
+          if (registro.presente === true) {
+            totalPresente = totalPresente + 1;
+          } else {
+            totalFalta = totalFalta + 1;
+          }
+        }
+      }
     }
+
+    // % se teve aula
+    let porcentagem = 0;
+    if (totalDeAulas > 0) {
+      porcentagem = Math.round((totalPresente / totalDeAulas) * 100);
+    }
+
+    // aluno na lista do relatório
+    relatorioFinal.push({
+      aluno_id: alunoAtual.id,
+      nome: alunoAtual.nome,
+      matricula: alunoAtual.matricula,
+      turma_nome: turma.nome,
+      total_aulas: totalDeAulas,
+      presentes: totalPresente,
+      faltas: totalFalta,
+      percentual: porcentagem
+    });
   }
 
-  return Array.from(alunoMap.values())
-    .map((entry) => ({
-      ...entry,
-      percentual: entry.total_aulas > 0
-        ? Math.round((entry.presentes / entry.total_aulas) * 100)
-        : 0,
-    }))
-    .sort((a, b) => a.nome.localeCompare(b.nome));
+  // ordem alfabetica
+  relatorioFinal.sort(function(a, b) {
+    if (a.nome < b.nome) return -1;
+    if (a.nome > b.nome) return 1;
+    return 0;
+  });
+
+  return relatorioFinal;
 }

@@ -45,6 +45,7 @@ export async function getChamadaDetalhes(chamadaId) {
   return chamada;
 }
 
-export async function getRelatorio(professorId) {
-  return chamadaRepo.getRelatorioByProfessor(professorId);
+// função pra buscar o relatório filtrando pela turma
+export async function getRelatorioPorTurma(idDaTurma) {
+  return chamadaRepo.getRelatorioCompletoDaTurma(idDaTurma);
 }
