@@ -58,12 +58,14 @@ export async function setPassword(req, res) {
 export async function register(req, res) {
   // Permitido apenas durante o primeiro setup (nenhum admin ativo no banco)
   const total = await adminService.countAdmins();
-  if (total > 0) {
-    return res.status(403).json({
-      status: 403,
-      message: 'Registro direto não permitido. Use o fluxo de convite (/admin/invite).',
-    });
-  }
+  
+   if (total > 0) {
+     return res.status(403).json({
+       status: 403,
+       message: 'Registro direto não permitido. Use o fluxo de convite (/admin/invite).',
+     });
+   }
+  
   const name = assertNonEmptyString(req.body?.name, 'name');
   const email = assertEmail(req.body?.email);
   const password = assertPassword(req.body?.password);
