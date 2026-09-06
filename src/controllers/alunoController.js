@@ -38,6 +38,17 @@ export async function create(req, res) {
     return res.status(400).json({ status: 400, message: 'escola_id é obrigatório' });
   }
 
+  // --- 🔒 NOVA TRAVA DE SEGURANÇA 🔒 Feita por: Gabriel Leonardo ---
+  // Busca a turma no banco para garantir que não haja conflito de IDs
+  const turma = await turmaService.getById(turma_id); 
+  if (turma && turma.nucleo_id !== nucleo_id) {
+    return res.status(400).json({ 
+      status: 400, 
+      message: 'Erro de integridade: O núcleo da aluna não bate com o núcleo da turma.' 
+    });
+  }
+  // -------------------------------------
+
   await alunoService.register({ nome, matricula, email, nucleo_id, bairro, escola_id, turma_id });
   const msg = email
     ? 'Aluna cadastrada! Um e-mail com o link para definir a senha foi enviado.'
