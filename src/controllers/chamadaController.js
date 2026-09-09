@@ -161,11 +161,25 @@ export async function getRelatorios(req, res) {
       return res.status(403).json({ status: 403, message: 'Acesso restrito a professores' });
     }
 
-    const relatorio = await chamadaService.getRelatorio(req.user.id);
+    let idDaTurma = req.query.turma_id || req.params.turma_id;
+    if (!idDaTurma) {
+      return res.status(400).json({ status: 400, message: 'É obrigatório informar o id da turma.' });
+    }
+    idDaTurma = Number(idDaTurma);
+    if (isNaN(idDaTurma)) {
+      return res.status(400).json({ status: 400, message: 'O id da turma deve ser um número válido.' });
+    }
+
+    const donoDaTurma = await turmaService.professorOwnsTurma(req.user.id, idDaTurma);
+    if (!donoDaTurma) {
+      return res.status(403).json({ status: 403, message: 'Turma não pertence a este professor' });
+    }
+
+    const relatorioDaTurma = await chamadaService.getRelatorioPorTurma(idDaTurma);
 
     res.status(200).json({
       status: 200,
-      data: relatorio,
+      data: relatorioDaTurma,
     });
   } catch (err) {
     res.status(500).json({ status: 500, message: err.message });
