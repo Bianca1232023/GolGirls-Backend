@@ -1,21 +1,42 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const smtpConfigured = Boolean(
+  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS,
+);
+
+const transporter = smtpConfigured
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    })
+  : null;
+
+async function sendEmail(message) {
+  if (!transporter) {
+    console.warn("SMTP não configurado; e-mail não enviado.");
+    return false;
+  }
+
+  try {
+    await transporter.sendMail(message);
+    return true;
+  } catch (error) {
+    console.error("Falha ao enviar e-mail:", error.message);
+    return false;
+  }
+}
 
 export async function sendPasswordSetupEmail(to, token) {
   const link = `${process.env.APP_URL}/professor/definir-senha?token=${token}`;
-  await transporter.sendMail({
+  return sendEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'GolGirls – Defina sua senha de acesso',
+    subject: "GolGirls – Defina sua senha de acesso",
     html: `
       <p>Olá!</p>
       <p>Você foi convidada(o) como professor(a) na plataforma <strong>GoLGirls</strong>.</p>
@@ -29,10 +50,10 @@ export async function sendPasswordSetupEmail(to, token) {
 
 export async function sendAdminSetupEmail(to, token) {
   const link = `${process.env.APP_URL}/admin/definir-senha?token=${token}`;
-  await transporter.sendMail({
+  return sendEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'GolGirls – Cadastro de Administrador',
+    subject: "GolGirls – Cadastro de Administrador",
     html: `
       <p>Olá!</p>
       <p>Você foi convidado(a) como <strong>administrador(a)</strong> na plataforma <strong>GoLGirls</strong>.</p>
@@ -46,10 +67,10 @@ export async function sendAdminSetupEmail(to, token) {
 
 export async function sendAlunoSetupEmail(to, token) {
   const link = `${process.env.APP_URL}/aluno/definir-senha?token=${token}`;
-  await transporter.sendMail({
+  return sendEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'GolGirls – Crie sua senha de acesso',
+    subject: "GolGirls – Crie sua senha de acesso",
     html: `
       <p>Olá!</p>
       <p>Você foi cadastrada(o) como aluna(o) na plataforma <strong>GoLGirls</strong>.</p>
@@ -63,10 +84,10 @@ export async function sendAlunoSetupEmail(to, token) {
 
 export async function sendAlunoPasswordResetEmail(to, token) {
   const link = `${process.env.APP_URL}/aluno/redefinir-senha?token=${token}`;
-  await transporter.sendMail({
+  return sendEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'GolGirls – Redefinição de senha',
+    subject: "GolGirls – Redefinição de senha",
     html: `
       <p>Olá!</p>
       <p>Recebemos uma solicitação para redefinir a senha da sua conta na plataforma <strong>GoLGirls</strong>.</p>
@@ -79,12 +100,12 @@ export async function sendAlunoPasswordResetEmail(to, token) {
 }
 
 export async function sendPasswordResetEmail(to, token, role) {
-  const path = role === 'admin' ? 'admin' : 'professor';
+  const path = role === "admin" ? "admin" : "professor";
   const link = `${process.env.APP_URL}/${path}/redefinir-senha?token=${token}`;
-  await transporter.sendMail({
+  return sendEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'GolGirls – Redefinição de senha',
+    subject: "GolGirls – Redefinição de senha",
     html: `
       <p>Olá!</p>
       <p>Recebemos uma solicitação para redefinir a senha da sua conta na plataforma <strong>GoLGirls</strong>.</p>
