@@ -1,4 +1,4 @@
-import prisma from '../models/prisma.js';
+import prisma from "../models/prisma.js";
 
 export async function createTable() {
   // no-op: schema gerenciado por `npx prisma migrate dev`
@@ -40,7 +40,7 @@ export async function findByProfessor(professorId) {
         },
       },
     },
-    orderBy: { turma: { id: 'asc' } },
+    orderBy: { turma: { id: "asc" } },
   });
   if (vinculos.length === 0) {
     return findAll();
@@ -64,13 +64,18 @@ export async function professorOwnsTurma(professorId, turmaId) {
   });
   if (count === 0) return true;
   const row = await prisma.professorTurma.findUnique({
-    where: { professor_id_turma_id: { professor_id: professorId, turma_id: turmaId } },
+    where: {
+      professor_id_turma_id: { professor_id: professorId, turma_id: turmaId },
+    },
   });
   return row !== null;
 }
 
 export async function findById(id) {
-  return prisma.turma.findUnique({ where: { id }, select: { id: true, nome: true } });
+  return prisma.turma.findUnique({
+    where: { id },
+    select: { id: true, nome: true, nucleo_id: true },
+  });
 }
 
 export async function findAll() {
@@ -80,7 +85,7 @@ export async function findAll() {
       nucleo: { select: { id: true, nome: true, localizacao: true } },
       professores: { include: { professor: { select: { name: true } } } },
     },
-    orderBy: { id: 'asc' },
+    orderBy: { id: "asc" },
   });
   return turmas.map((t) => ({
     id: t.id,
@@ -92,7 +97,11 @@ export async function findAll() {
     nucleo_id: t.nucleo?.id ?? null,
     nucleo_nome: t.nucleo?.nome ?? null,
     nucleo_localizacao: t.nucleo?.localizacao ?? null,
-    professores: t.professores.map((pt) => pt.professor.name).filter(Boolean).join(', ') || null,
+    professores:
+      t.professores
+        .map((pt) => pt.professor.name)
+        .filter(Boolean)
+        .join(", ") || null,
   }));
 }
 
@@ -102,7 +111,7 @@ export async function listVinculos() {
       professor: { select: { name: true } },
       turma: { select: { nome: true } },
     },
-    orderBy: [{ turma: { nome: 'asc' } }, { professor: { name: 'asc' } }],
+    orderBy: [{ turma: { nome: "asc" } }, { professor: { name: "asc" } }],
   });
   return vinculos.map((v) => ({
     professor_id: v.professor_id,
@@ -115,4 +124,3 @@ export async function listVinculos() {
 export async function remove(id) {
   return prisma.turma.delete({ where: { id } });
 }
-

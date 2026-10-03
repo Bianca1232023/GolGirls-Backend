@@ -32,6 +32,7 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.6",
+    "yaml": "^2.9.0"
   }
 }
