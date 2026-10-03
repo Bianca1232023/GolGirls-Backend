@@ -108,4 +108,3 @@ export async function findByResetToken(token) {
 export async function remove(id) {
   return prisma.aluno.delete({ where: { id } });
 }
-
