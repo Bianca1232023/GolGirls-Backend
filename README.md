@@ -1,15 +1,24 @@
 # ⚽ Gol Girls Backend
+
 A iniciativa Gol Girls existe para promover o empoderamento de meninas negras, usando o esporte como uma ferramenta poderosa para abrir portas e realizar sonhos. Focamos em meninas negras e periféricas, pois queremos fortalecê-las em seu caminho de descoberta do mundo, construção da autoestima e ocupação de todos os espaços.
 
-API backend do projeto GoLGirls, construída com Node.js e Express, com persistência em MySQL.
+API backend do projeto Gol Girls, construída com Node.js, Express e Prisma, com persistência em MySQL.
+
+## Stack
+
+- Node.js 22 (LTS)
+- Express 5
+- Prisma 5 (ORM e migrations)
+- MySQL 8.4 (LTS)
+- Vitest (testes)
 
 ## Requisitos
 
-- Node.js 20.x
-- npm 9+
-- MySQL 8+
+- Node.js 20.19+ ou 22+
+- npm 10+
+- MySQL 8.4+ (ou Docker)
 
-## Instalação
+## Configuração
 
 1. Instale as dependências:
 
@@ -17,94 +26,106 @@ API backend do projeto GoLGirls, construída com Node.js e Express, com persist�
 npm install
 ```
 
-2. Crie um arquivo `.env` na raiz do projeto baseado nas variáveis abaixo:
+2. Crie o arquivo `.env` a partir do exemplo e preencha os valores:
 
-```env
-# Banco de dados
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=golgirls
-DB_PASSWORD=sua_senha
-DB_NAME=golgirls
+```bash
+cp .env.example .env
+```
 
-# JWT
-JWT_SECRET=gere-com-openssl-rand-hex-32   # mínimo 32 caracteres
-JWT_EXPIRES_IN=1h
+| Variável | Descrição |
+| --- | --- |
+| `PORT` | Porta da API (padrão `3001`) |
+| `JWT_SECRET` | Segredo do JWT, mínimo 32 caracteres (`openssl rand -hex 32`) |
+| `JWT_EXPIRES_IN` | Expiração do token (padrão `1h`) |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexão com o MySQL |
+| `MYSQL_ROOT_PASSWORD` | Senha root do MySQL (usada somente pelo Docker Compose) |
+| `DATABASE_URL` | URL de conexão usada pelo Prisma. Caracteres especiais na senha precisam ser codificados (URL-encoded) |
+| `BCRYPT_ROUNDS` | Custo do hash de senha (padrão `12`) |
+| `CORS_ORIGIN` | Origem permitida do frontend (ex.: `http://localhost:5173`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envio de e-mails (convites e recuperação de senha) |
+| `APP_URL` | URL do frontend, usada nos links enviados por e-mail |
 
-# E-mail (SMTP)
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=seu@email.com
-SMTP_PASS=sua_senha_smtp
-SMTP_FROM=noreply@example.com
+3. Gere o Prisma Client e aplique as migrations:
 
-# Frontend (para links nos e-mails)
-APP_URL=http://localhost:3001
-
-# CORS (defina a origem permitida em produção)
-CORS_ORIGIN=http://localhost:5173
+```bash
+npm run prisma:generate
+npm run migrate:deploy
 ```
 
 ## Executar em desenvolvimento
-
-Use o script de desenvolvimento com nodemon:
 
 ```bash
 npm run dev
 ```
 
-## Dependências
+A API fica disponível em `http://localhost:3001`.
 
-### dotenv
+## Scripts
 
-- Função: carregar variáveis de ambiente a partir de um arquivo .env.
-- Onde é útil: configuração de porta, segredos de token e demais credenciais fora do código.
+| Script | Descrição |
+| --- | --- |
+| `npm run dev` | Inicia a API com nodemon |
+| `npm test` | Executa os testes com Vitest |
+| `npm run test:watch` | Testes em modo watch |
+| `npm run prisma:generate` | Gera o Prisma Client |
+| `npm run migrate:dev` | Cria/aplica migrations em desenvolvimento |
+| `npm run migrate:deploy` | Aplica migrations existentes (produção/Docker) |
+| `npm run db:push` | Sincroniza o schema sem criar migration |
 
-### express
+## Primeira execução com Docker Compose
 
-- Função: framework HTTP para criação da API.
-- Onde é útil: criação de rotas, middlewares, parsing de JSON e tratamento de requisições/respostas.
-
-### jsonwebtoken
-
-- Função: criação e validação de tokens JWT.
-- Onde é útil: autenticação e autorização de usuários na API.
-
-### mysql2
-
-- Função: driver MySQL para Node.js com suporte a promises e prepared statements.
-- Onde é útil: todas as queries ao banco de dados, prevenindo SQL injection por padrão.
-
-### nodemailer
-
-- Função: envio de e-mails via SMTP.
-- Onde é útil: fluxos de convite, definição de senha e recuperação de senha.
-
-### bcryptjs
-
-- Função: hash seguro de senhas.
-- Onde é útil: cadastro e login de admins e professores.
-
-### helmet
-
-- Função: aplica headers HTTP de segurança.
-- Onde é útil: proteção contra ataques comuns (XSS, clickjacking etc.).
-
-### express-rate-limit
-
-- Função: limitação de requisições por IP.
-- Onde é útil: rotas de autenticação (login, esqueci minha senha) para mitigar brute-force.
-
-## Execução com Docker
+1. Instale e inicie o Docker Desktop ou outro runtime compatível com Docker Compose.
+2. Na raiz do backend, crie o arquivo de configuração local:
 
 ```bash
-docker compose up --build
+cp .env.example .env
 ```
 
-A API ficará disponível em `http://localhost:3001` e a documentação Swagger em `http://localhost:3001/api-docs`.
+3. Edite o `.env` e substitua os valores de exemplo. Defina `DB_USER`, `DB_PASSWORD`, `DB_NAME` e `MYSQL_ROOT_PASSWORD`; gere um segredo forte para `JWT_SECRET` com `openssl rand -hex 32`. SMTP só é necessário para testar os fluxos de envio de e-mail. Não compartilhe nem envie o `.env` ao Git.
+4. Construa e inicie o MySQL, as migrations e a API:
 
-## Primeiro acesso
+```bash
+docker compose up --build -d
+```
 
-Somente quando o banco estiver vazio é possível criar o primeiro admin via `POST /admin/register`. A partir daí, novos admins devem ser criados pelo fluxo de convite (`POST /admin/invite`).
+O serviço `migrate` aplica as migrations e encerra. A criação e o gerenciamento de administradores devem ser feitos pelos fluxos da aplicação; o Compose não cria contas automaticamente.
 
+Se você usa Rancher Desktop no macOS e o contexto padrão não aponta para ele, use `docker --context rancher-desktop compose` no lugar de `docker compose` nos comandos desta seção.
+
+O Compose sobe três serviços:
+
+- `db`: MySQL 8.4 com volume persistente (`mysql_data`), disponível no host em `127.0.0.1:3306` (a API também acessa o banco pela porta `3306`).
+- `migrate`: executa `prisma migrate deploy` e encerra.
+- `api`: inicia somente após as migrations concluírem, em `http://localhost:3001`.
+
+Confira a API em `http://localhost:3001/` e a documentação em `http://localhost:3001/api-docs`.
+
+Para parar:
+
+```bash
+docker compose down        # mantém os dados
+docker compose down -v     # remove também o volume do banco
+```
+
+Se estiver usando o frontend via Docker (`http://localhost:8080`), defina `CORS_ORIGIN=http://localhost:8080` e `APP_URL=http://localhost:8080` no `.env`.
+
+> Atualizando de uma versão anterior com MySQL 8.0: o MySQL 8.4 migra o volume existente automaticamente, mas faça um backup antes.
+
+## Documentação da API
+
+Swagger disponível em `http://localhost:3001/api-docs`.
+
+## Principais dependências
+
+| Pacote | Uso |
+| --- | --- |
+| `express` | Framework HTTP, rotas e middlewares |
+| `@prisma/client` / `prisma` | Acesso ao banco e migrations |
+| `mysql2` | Driver MySQL |
+| `jsonwebtoken` | Autenticação e autorização via JWT |
+| `bcryptjs` | Hash de senhas |
+| `helmet` | Headers HTTP de segurança |
+| `express-rate-limit` | Limite de requisições (mitiga brute-force) |
+| `nodemailer` | Envio de e-mails via SMTP |
+| `swagger-jsdoc` / `swagger-ui-express` | Documentação da API |
+| `dotenv` | Carregamento de variáveis de ambiente |
