@@ -39,6 +39,7 @@ cp .env.example .env
 | `JWT_EXPIRES_IN` | Expiração do token (padrão `1h`) |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexão com o MySQL |
 | `MYSQL_ROOT_PASSWORD` | Senha root do MySQL (usada somente pelo Docker Compose) |
+| `MYSQL_PORT` | Porta do MySQL exposta no host pelo Docker Compose (padrão `3307`; a porta interna continua `3306`) |
 | `DATABASE_URL` | URL de conexão usada pelo Prisma. Caracteres especiais na senha precisam ser codificados (URL-encoded) |
 | `BCRYPT_ROUNDS` | Custo do hash de senha (padrão `12`) |
 | `ADMIN_SEED_PASSWORD` | Senha usada pelo seed do administrador inicial; defina localmente e não a envie ao Git |
@@ -57,6 +58,7 @@ npm run migrate:deploy
 
 ```bash
 npm run dev
+
 ```
 
 A API fica disponível em `http://localhost:3001`.
@@ -98,7 +100,7 @@ Se você usa Rancher Desktop no macOS e o contexto padrão não aponta para ele,
 
 O Compose sobe três serviços:
 
-- `db`: MySQL 8.4 com volume persistente (`mysql_data`), disponível no host em `127.0.0.1:3306` (a API também acessa o banco pela porta `3306`).
+- `db`: MySQL 8.4 com volume persistente (`mysql_data`), disponível no host em `127.0.0.1:3307` por padrão (a API acessa o banco pela porta interna `3306`). Se a porta `3307` também estiver ocupada, defina outro valor em `MYSQL_PORT` no `.env`.
 - `migrate`: executa `prisma migrate deploy` e encerra.
 - `api`: inicia somente após as migrations concluírem, em `http://localhost:3001`.
 
