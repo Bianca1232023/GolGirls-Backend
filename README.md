@@ -42,6 +42,7 @@ cp .env.example .env
 | `MYSQL_PORT` | Porta do MySQL exposta no host pelo Docker Compose (padrão `3307`; a porta interna continua `3306`) |
 | `DATABASE_URL` | URL de conexão usada pelo Prisma. Caracteres especiais na senha precisam ser codificados (URL-encoded) |
 | `BCRYPT_ROUNDS` | Custo do hash de senha (padrão `12`) |
+| `ADMIN_SEED_PASSWORD` | Senha usada pelo seed do administrador inicial; defina localmente e não a envie ao Git |
 | `CORS_ORIGIN` | Origem permitida do frontend (ex.: `http://localhost:5173`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envio de e-mails (convites e recuperação de senha) |
 | `APP_URL` | URL do frontend, usada nos links enviados por e-mail |
@@ -73,6 +74,9 @@ A API fica disponível em `http://localhost:3001`.
 | `npm run migrate:dev` | Cria/aplica migrations em desenvolvimento |
 | `npm run migrate:deploy` | Aplica migrations existentes (produção/Docker) |
 | `npm run db:push` | Sincroniza o schema sem criar migration |
+| `npm run seed:admin` | Cria ou atualiza o admin inicial `GolAdmin` |
+
+Para criar o administrador inicial, defina `ADMIN_SEED_PASSWORD` no `.env` local e execute `npm run seed:admin` depois de aplicar as migrations. O seed usa o e-mail `santanabianca447@gmail.com`, ativa a conta e armazena apenas o hash bcrypt da senha. É seguro executar novamente: o registro desse e-mail será atualizado com os dados do seed.
 
 ## Primeira execução com Docker Compose
 
@@ -83,14 +87,14 @@ A API fica disponível em `http://localhost:3001`.
 cp .env.example .env
 ```
 
-3. Edite o `.env` e substitua os valores de exemplo. Defina `DB_USER`, `DB_PASSWORD`, `DB_NAME` e `MYSQL_ROOT_PASSWORD`; gere um segredo forte para `JWT_SECRET` com `openssl rand -hex 32`. SMTP só é necessário para testar os fluxos de envio de e-mail. Não compartilhe nem envie o `.env` ao Git.
+3. Edite o `.env` e substitua os valores de exemplo. Defina `DB_USER`, `DB_PASSWORD`, `DB_NAME` e `MYSQL_ROOT_PASSWORD`; gere um segredo forte para `JWT_SECRET` com `openssl rand -hex 32`. Para criar o administrador inicial, também defina `ADMIN_SEED_PASSWORD`. SMTP só é necessário para testar os fluxos de envio de e-mail. Não compartilhe nem envie o `.env` ao Git.
 4. Construa e inicie o MySQL, as migrations e a API:
 
 ```bash
 docker compose up --build -d
 ```
 
-O serviço `migrate` aplica as migrations e encerra. A criação e o gerenciamento de administradores devem ser feitos pelos fluxos da aplicação; o Compose não cria contas automaticamente.
+O serviço `migrate` aplica as migrations e encerra. O Compose não cria contas automaticamente; para criar o admin inicial após a primeira subida, execute `npm run seed:admin` na pasta do backend.
 
 Se você usa Rancher Desktop no macOS e o contexto padrão não aponta para ele, use `docker --context rancher-desktop compose` no lugar de `docker compose` nos comandos desta seção.
 
