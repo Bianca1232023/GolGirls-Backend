@@ -19,8 +19,17 @@ export async function invite(req, res) {
     err.status = 409;
     throw err;
   }
-  const { token } = await adminService.invite(email);
-  await sendAdminSetupEmail(email, token);
+  const { id, token } = await adminService.invite(email);
+  try {
+    await sendAdminSetupEmail(email, token);
+  } catch (error) {
+    try {
+      await adminService.remove(id);
+    } catch (cleanupError) {
+      console.error('Não foi possível remover o cadastro pendente após a falha no envio do convite:', cleanupError);
+    }
+    throw error;
+  }
   res.status(201).json({ status: 201, message: 'Administrador convidado com sucesso. E-mail enviado.' });
 }
 

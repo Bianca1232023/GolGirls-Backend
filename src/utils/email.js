@@ -18,16 +18,21 @@ const transporter = smtpConfigured
 
 async function sendEmail(message) {
   if (!transporter) {
-    console.warn("SMTP não configurado; e-mail não enviado.");
-    return false;
+    const error = new Error('SMTP não configurado. Defina SMTP_HOST, SMTP_USER e SMTP_PASS no backend.');
+    error.status = 503;
+    throw error;
   }
 
   try {
-    await transporter.sendMail(message);
-    return true;
+    const result = await transporter.sendMail(message);
+    if (result.rejected?.length && !result.accepted?.length) {
+      throw new Error('O servidor SMTP recusou o destinatário.');
+    }
   } catch (error) {
-    console.error("Falha ao enviar e-mail:", error.message);
-    return false;
+    console.error('Falha ao enviar e-mail:', error instanceof Error ? error.message : error);
+    const deliveryError = new Error('Não foi possível enviar o e-mail. Verifique as credenciais e a conexão SMTP do backend.');
+    deliveryError.status = 502;
+    throw deliveryError;
   }
 }
 

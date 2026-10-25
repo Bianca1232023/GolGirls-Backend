@@ -47,6 +47,8 @@ cp .env.example .env
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envio de e-mails (convites e recuperação de senha) |
 | `APP_URL` | URL do frontend, usada nos links enviados por e-mail |
 
+Para Gmail, use `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587` e `SMTP_SECURE=false`; `SMTP_USER` deve ser a conta remetente e `SMTP_PASS` deve ser uma senha de app do Google (com verificação em duas etapas), não a senha normal da conta. O envio de convite retorna erro se o SMTP não estiver configurado ou não aceitar a mensagem.
+
 3. Gere o Prisma Client e aplique as migrations:
 
 ```bash
@@ -77,6 +79,10 @@ A API fica disponível em `http://localhost:3001`.
 | `npm run seed:admin` | Cria ou atualiza o admin inicial `GolAdmin` |
 
 Para criar o administrador inicial, defina `ADMIN_SEED_PASSWORD` no `.env` local e execute `npm run seed:admin` depois de aplicar as migrations. O seed usa o e-mail `santanabianca447@gmail.com`, ativa a conta e armazena apenas o hash bcrypt da senha. É seguro executar novamente: o registro desse e-mail será atualizado com os dados do seed.
+
+## Atalhos com Make
+
+Na raiz do backend, execute `make help` para listar os comandos disponíveis. `make setup` instala as dependências e gera o Prisma Client; `make run` inicia a API localmente; `make build` constrói a imagem Docker da API (o backend Node.js não possui etapa de compilação). Use `make docker-up` para construir e iniciar o banco e a API, `make docker-down` para parar os containers sem apagar o banco e `make docker-logs` para acompanhar a API. Para o admin inicial, defina `ADMIN_SEED_PASSWORD` no `.env` e rode `make docker-seed-admin` (Docker) ou `make seed-admin` (ambiente local).
 
 ## Primeira execução com Docker Compose
 

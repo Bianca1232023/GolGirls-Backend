@@ -64,8 +64,17 @@ export async function createProfessor(req, res) {
     err.status = 409;
     throw err;
   }
-  const { token } = await professorService.invite(email);
-  await sendPasswordSetupEmail(email, token);
+  const { id, token } = await professorService.invite(email);
+  try {
+    await sendPasswordSetupEmail(email, token);
+  } catch (error) {
+    try {
+      await professorService.remove(id);
+    } catch (cleanupError) {
+      console.error('Não foi possível remover o cadastro pendente após a falha no envio do convite:', cleanupError);
+    }
+    throw error;
+  }
   res.status(201).json({ status: 201, message: 'Professor convidado com sucesso. E-mail enviado.' });
 }
 
@@ -73,7 +82,11 @@ export async function remove(req, res) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ status: 403, message: 'Acesso restrito a administradores' });
   }
-  await professorService.remove(req.params.id);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ status: 400, message: 'ID inválido' });
+  }
+  await professorService.remove(id);
   res.json({ status: 200, message: 'Professor removido com sucesso' });
 }
 
